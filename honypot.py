@@ -1,7 +1,47 @@
-import socket
-import select
-import time
 import datetime
+import select
+import socket
+import sqlite3
+import time
+
+ip = "127.0.0.1"
+portList = [
+    22, # ssh
+    23, # telent
+]
+
+
+#Old used ports
+#1080, 33443, 33444, 52285, 5555, 5631, 63358, 63544, 81, 1222, 1338, 1475, 1582, 1730, 21389, 21390, 21391, 21392,
+#21393, 33445, 33446, 33447, 34592, 4300, 45380, 45381, 45382, 45383, 45384, 45386, 45387, 45388, 45389, 45390,
+#45391, 45392, 45393, 45394, 45395, 45396, 45397, 45398, 45399, 45400, 5338, 10097, 12294, 2145, 2323, 2466, 26549,
+#26556, 3627, 3912, 57879, 65234, 8080, 9275, 3753, 80, 7071, 445, 443, 123, 8900, 41470, 5901, 5902, 68, 23, 22,
+#445, 80, 65531, 58122, 25
+
+
+
+
+class Database:
+
+    def __init__(self):
+        self.con = sqlite3.connect('connections.db')
+        self.cur = self.con.cursor()
+
+        self.create_tables()
+
+    def __del__(self):
+        self.con.close()
+
+    def create_tables(self):
+        connections_table = """CREATE TABLE IF NOT EXISTS CREATE TABLE "connection" (
+                            "id"	INTEGER, AUTOINCREMENT
+                            "timestamp"	TEXT,
+                            "source port"	TEXT,
+                            "source ip"	TEXT,
+                            "content"	BLOB
+                            );"""
+
+        self.cur.execute(connections_table)
 
 
 class Logger():
@@ -234,11 +274,7 @@ class HornyPot():
 
 
 serviceList = []
-
-# ip = "127.0.0.1"
-
-#portList = set([1080, 33443, 33444, 52285, 5555, 5631, 63358, 63544, 81, 1222, 1338, 1475, 1582, 1730, 21389, 21390, 21391, 21392, 21393, 33445, 33446, 33447, 34592, 4300, 45380, 45381, 45382, 45383, 45384, 45386, 45387, 45388, 45389, 45390, 45391, 45392, 45393, 45394, 45395, 45396, 45397, 45398, 45399, 45400, 5338, 10097, 12294, 2145, 2323, 2466, 26549, 26556, 3627, 3912, 57879, 65234, 8080, 9275, 3753, 80, 7071, 445, 443, 123, 8900, 41470, 5901, 5902, 68, 23, 22, 445, 80, 65531, 58122, 25])
-portList = set([23])
+# portList = set([23])
 
 for port in portList:
 
