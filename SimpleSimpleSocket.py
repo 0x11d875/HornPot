@@ -10,6 +10,9 @@ class SimpleSocket(object):
         self.ip = ""
         self.port = 0
 
+        self.tx: int = 0
+        self.rx: int = 0
+
         if addr is not None:
             self.ip = addr[0]
             self.port = addr[1]
@@ -24,12 +27,14 @@ class SimpleSocket(object):
             msg = self.socket.recv(4069)
         except Exception as e:
             return None
-
+        self.rx += len(msg)
         return msg
 
     def send(self, msg):
         try:
-            return self.socket.send(msg)
+            len = self.socket.send(msg)
+            self.tx += 1
+            return len
         except Exception as e:
             return 0
 

@@ -2,9 +2,10 @@ import datetime
 import sqlite3
 import time
 
+TIMEFORMAT = '%Y-%m-%dT%H:%M:%S'
 
 def get_timestamp():
-    return str(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%dT%H:%M:%S'))
+    return str(datetime.datetime.fromtimestamp(time.time()).strftime(TIMEFORMAT))
 
 def log(msg, module=None):
 

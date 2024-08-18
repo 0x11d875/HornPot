@@ -1,5 +1,8 @@
+import argparse
+import importlib
 import pwd
 import socket
+import sys
 
 from HornPot import HornPot
 from logger import Database
@@ -31,21 +34,28 @@ def drop_privileges(username):
         raise RuntimeError(f"Could not drop privileges: {e}")
 
 
+def load_config(config_path):
+    spec = importlib.util.spec_from_file_location("config", config_path)
+    config_module = importlib.util.module_from_spec(spec)
+    sys.modules["config"] = config_module
+    spec.loader.exec_module(config_module)
+    return config_module
 
-ip = "0.0.0.0"
+
+parser = argparse.ArgumentParser(description='Start the application with a given config file.')
+parser.add_argument('config_path', type=str, help='The path to the config.py file')
+args = parser.parse_args()
+
+config_module = load_config(args.config_path)
+
+
+
 db = Database()
-
-
-service_configs = []
-service_configs.append({'name': 'telnet', 'protocol': socket.SOCK_STREAM, 'ip': ip, 'port': 2223, 'service': ServiceBase})
-
-
 services = []
-for service_config in service_configs:
+for service_config in config_module.service_configs:
     service_class = service_config['service']
-    service_instance = service_class(service_config['name'], service_config['ip'], service_config['port'], db, SessionBase)
+    service_instance = service_class(service_config['name'], service_config['ip'], service_config['port'], db, config_module.config, SessionBase)
     services.append(service_instance)
-
 
 drop_privileges('hornpot')
 hornpot = HornPot(services)

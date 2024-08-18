@@ -1,18 +1,20 @@
+from datetime import datetime
 from socket import socket
 
 from SimpleSimpleSocket import SimpleSocket
-from logger import log, Database
+from logger import log, Database, get_timestamp, TIMEFORMAT
 from services.Session import SessionBase
 
 
 class ServiceBase:
 
-    def __init__(self, name: str, ip: str, port: int, db:Database, session=SessionBase):
+    def __init__(self, name: str, ip: str, port: int, db:Database, config, session=SessionBase):
         self.name: str = name
         self.ip: str = ip
         self.port: int = port
 
         self.db: Database = db
+        self.config: dict= config
 
         log(f'Service {self.name} running on port {self.port}')
 
@@ -22,6 +24,35 @@ class ServiceBase:
         # lookup dict to match socket -> Session
         self.s_to_session: dict[socket: SessionBase] = {}
         self.session = session
+
+    def check_quota(self):
+        if self.config.get('quota', False):
+            quota = self.config.get('quota')
+
+            now = datetime.strptime(get_timestamp(), TIMEFORMAT)
+            killed_sessions = []
+            for session in self.s_to_session.values():
+                active_since = datetime.strptime(session.session_start, TIMEFORMAT)
+                if quota.get('active', False) and abs((now - active_since).total_seconds()) > quota['active']:
+                    killed_sessions.append((session, 'killed quota active'))
+                    continue
+
+                last_active = datetime.strptime(session.session_start, TIMEFORMAT)
+                if quota.get('idle', False) and abs((now - last_active).total_seconds()) > quota['idle']:
+                    killed_sessions.append((session, 'killed quota idle'))
+                    continue
+
+                if quota.get('tx', False) and session.ss.tx > quota['tx']:
+                    killed_sessions.append((session, 'killed quota tx'))
+                    continue
+
+                if quota.get('rx', False) and session.ss.tx > quota['rx']:
+                    killed_sessions.append((session, 'killed quota rx'))
+                    continue
+
+            for kill_session in killed_sessions:
+                self._terminate_session(kill_session[0].ss.socket, kill_session[1])
+
 
     def socket_to_session(self, s: socket) -> SessionBase | SimpleSocket | None:
         if s == self.serverSo.socket:
@@ -52,13 +83,16 @@ class ServiceBase:
                 needs_write.append(s)
         return needs_write
 
-    def _terminate_session(self, s: socket) -> None:
+    def _terminate_session(self, s: socket, reason) -> None:
         session = self.socket_to_session(s)
         if session is not None:
             self.s_to_session.pop(s)
 
-        self.db.add_session(session.session_start, session.ss.ip, session.ss.port, session.conservation)
-        print(session.conservation)
+        conservation = session.conservation
+        if reason:
+            conservation.append(f"[c][{get_timestamp()}]: Connection terminated duo to {reason}")
+
+        self.db.add_session(session.session_start, session.ss.ip, session.ss.port, conservation)
 
 
     def handle_readable(self, s: socket):
