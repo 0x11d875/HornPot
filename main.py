@@ -1,5 +1,5 @@
 import argparse
-import importlib
+import importlib.util
 import pwd
 import socket
 import sys
@@ -49,12 +49,19 @@ args = parser.parse_args()
 config_module = load_config(args.config_path)
 
 
-
 db = Database()
 services = []
 for service_config in config_module.service_configs:
     service_class = service_config['service']
-    service_instance = service_class(service_config['name'], service_config['ip'], service_config['port'], db, config_module.config, SessionBase)
+    service_class = ServiceBase
+    service_instance = service_class(
+        service_config['name'],
+        service_config['ip'],
+        service_config['port'],
+        db,
+        config_module.config,
+        SessionBase
+    )
     services.append(service_instance)
 
 drop_privileges('hornpot')
