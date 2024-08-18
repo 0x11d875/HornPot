@@ -68,7 +68,7 @@ class ServiceBase:
     def __accept_client(self) -> None:
         ss = self.serverSo.accept()
         if ss is not None:
-            self.s_to_session[ss.socket] = self.session(ss)
+            self.s_to_session[ss.socket] = self.session(ss, self.serverSo.port)
 
     def __close_client(self, ss: SimpleSocket) -> None:
         self.s_to_session.pop(self.__simple_socket_to_socket(ss))
@@ -83,7 +83,7 @@ class ServiceBase:
                 needs_write.append(s)
         return needs_write
 
-    def _terminate_session(self, s: socket, reason) -> None:
+    def _terminate_session(self, s: socket, reason=None) -> None:
         session = self.socket_to_session(s)
         if session is not None:
             self.s_to_session.pop(s)

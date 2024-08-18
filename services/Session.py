@@ -6,8 +6,9 @@ from logger import log, Database, get_timestamp
 
 class SessionBase:
 
-    def __init__(self, ss: SimpleSocket):
+    def __init__(self, ss: SimpleSocket, server_port:int):
         self.ss: SimpleSocket = ss
+        self.server_port: int = server_port
 
         # log data
         self.session_start = get_timestamp()
@@ -15,7 +16,7 @@ class SessionBase:
         self.conservation = []
 
 
-        log(f"New session from {self.ss.ip}:{self.ss.port} at port {self.ss.port}.", self.__class__.__name__)
+        log(f"New session from {self.ss.ip}:{self.ss.port} at port {self.server_port}.", self.__class__.__name__)
 
         self.write_queue = []
         self.connected = True

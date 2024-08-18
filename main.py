@@ -52,6 +52,7 @@ config_module = load_config(args.config_path)
 db = Database()
 services = []
 for service_config in config_module.service_configs:
+    # todo, does not work since we outsourced the config
     service_class = service_config['service']
     service_class = ServiceBase
     service_instance = service_class(
