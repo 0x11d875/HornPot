@@ -26,8 +26,14 @@ class SessionBase:
     def __del__(self):
         log(f"Disconnecting client {self.remote_ip6}:{self.remote_port6} at port {self.own_port6}.",
             self.__class__.__name__)
-        self.s.shutdown(socket.SHUT_RDWR)
-        self.s.close()
+        try:
+            self.s.shutdown(socket.SHUT_RDWR)
+        except:
+            pass
+        try:
+            self.s.close()
+        except:
+            pass
 
     def wants_write(self) -> bool:
         return len(self.message_queue) != 0
