@@ -53,7 +53,6 @@ db = Database()
 services = []
 for service_config in config_module.service_configs:
     # todo, does not work since we outsourced the config
-    service_class = service_config['service']
     service_class = Service
     service_instance = service_class(
         service_config['name'],
@@ -61,7 +60,7 @@ for service_config in config_module.service_configs:
         service_config['port'],
         db,
         config_module.config,
-        SessionBase
+        service_config['session']
     )
     services.append(service_instance)
 

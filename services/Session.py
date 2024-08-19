@@ -15,7 +15,7 @@ class SessionBase:
         self.last_active = get_timestamp()
         self.conversation = []
 
-        self.message_queue: str = ""
+        self.message_queue: bytes = b''
         self.connected = True
 
         self.num_sent_bytes = 0
@@ -32,20 +32,20 @@ class SessionBase:
     def wants_write(self) -> bool:
         return len(self.message_queue) != 0
 
-    def read_from_socket(self):
+    def _read_from_socket(self) -> bytes | None:
         try:
             msg = self.s.recv(4096)
         except OSError as e:
             # TODO: logging
-            return False
+            return None
 
         # error -> could not have been readable after select
         if msg is None:
-            return False
+            return None
 
         # client disconnect
         if len(msg) == 0:
-            return False
+            return None
 
         self.num_received_bytes += len(msg)
 
@@ -53,7 +53,14 @@ class SessionBase:
         self.conversation.append(f'[r][{get_timestamp()}]: {msg}')
         log(f"Read from {self.remote_ip6}:{self.remote_port6} '{msg}'.", self.__class__.__name__)
         # TODO log message and handle it
+        return msg
+
+    def read_from_socket(self) -> bool:
+        msg = self._read_from_socket()
+        if msg is None:
+            return False
         return True
+
 
     def send_message(self) -> bool:
         try:
@@ -65,6 +72,8 @@ class SessionBase:
         # error -> could not have been writable after select
         if sent <= 0:
             return False
+
+        log(f"Send to {self.remote_ip6}:{self.remote_port6} '{self.message_queue[:sent]}'.", self.__class__.__name__)
 
         self.num_sent_bytes += sent
 

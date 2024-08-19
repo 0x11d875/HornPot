@@ -16,6 +16,7 @@ class HornPot:
 
     def update_all_sockets(self):
         self.all_sockets.clear()
+        self.write_sockets.clear()
         for service in self.services:
             service.check_quota()
             self.all_sockets += [service.server]
