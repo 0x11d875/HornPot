@@ -1,6 +1,6 @@
 import select
 import socket
-
+import selectors
 from logger import log, Database
 from services.ServiceBase import ServiceBase
 
@@ -19,6 +19,7 @@ class HornPot:
     def update_all_sockets(self):
             self.all_sockets.clear()
             for service in self.services:
+                service.check_quota()
                 self.all_sockets += [service.serverSo.socket]
                 self.all_sockets += service.get_all_handled_sockets()
                 self.clientsWeWantToWrite += service.get_all_needs_write_sockets()

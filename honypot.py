@@ -21,27 +21,6 @@ portList = [
 
 
 
-class Database:
-
-    def __init__(self):
-        self.con = sqlite3.connect('connections.db')
-        self.cur = self.con.cursor()
-
-        self.create_tables()
-
-    def __del__(self):
-        self.con.close()
-
-    def create_tables(self):
-        connections_table = """CREATE TABLE IF NOT EXISTS CREATE TABLE "connection" (
-                            "id"	INTEGER, AUTOINCREMENT
-                            "timestamp"	TEXT,
-                            "source port"	TEXT,
-                            "source ip"	TEXT,
-                            "content"	BLOB
-                            );"""
-
-        self.cur.execute(connections_table)
 
 
 class Logger():
@@ -50,7 +29,7 @@ class Logger():
         self.port = port
 
     def log(self, msg):
-        timstr = str(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        timstr = str(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%dT%H:%M:%S'))
 
         f = open("logs/port" + str(self.port) + ".log", 'a')
         f.writelines(timstr + ": " + msg + '\r\n')
@@ -239,11 +218,11 @@ class HornyPot():
     def refreshAllSocketList(self):
         self.allSockets = []
         for serv in self.allServices:
-            self.allSockets += serv.allSockets
+            self.allSockets += serv.all_sockets
 
     def socketToService(self, soc):
         for serv in self.allServices:
-            simplSo = serv.socketToSimpleSocket(soc)
+            simplSo = serv.__socket_to_simple_socket(soc)
 
             if simplSo is not None:
                 return serv
