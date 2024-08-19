@@ -6,7 +6,7 @@ import sys
 
 from HornPot import HornPot
 from logger import Database
-from services.ServiceBase import ServiceBase
+from services.Service import Service
 from services.Session import SessionBase
 
 def drop_privileges(username):
@@ -54,7 +54,7 @@ services = []
 for service_config in config_module.service_configs:
     # todo, does not work since we outsourced the config
     service_class = service_config['service']
-    service_class = ServiceBase
+    service_class = Service
     service_instance = service_class(
         service_config['name'],
         service_config['ip'],
@@ -65,5 +65,5 @@ for service_config in config_module.service_configs:
     )
     services.append(service_instance)
 
-drop_privileges('hornpot')
+drop_privileges(config_module.user)
 hornpot = HornPot(services)

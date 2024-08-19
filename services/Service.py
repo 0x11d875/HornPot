@@ -1,25 +1,26 @@
+import socket
 from datetime import datetime
-from socket import socket
-
-from SimpleSimpleSocket import SimpleSocket
 from logger import log, Database, get_timestamp, TIMEFORMAT
 from services.Session import SessionBase
 
 
-class ServiceBase:
+class Service:
 
-    def __init__(self, name: str, ip: str, port: int, db:Database, config, session=SessionBase):
+    def __init__(self, name: str, ip: str, port: int, db: Database, config: dict, session=SessionBase):
         self.name: str = name
         self.ip: str = ip
         self.port: int = port
 
         self.db: Database = db
-        self.config: dict= config
+        self.config: dict = config
 
         log(f'Service {self.name} running on port {self.port}')
 
-        self.serverSo = SimpleSocket((ip, port), True)
-        self.serverSo.bind_listen_and_go(ip, port)
+        self.server = socket.create_server(address=(self.ip, self.port), family=socket.AF_INET6, backlog=5,
+                                           reuse_port=True, dualstack_ipv6=True)
+
+        # FIXME: could be blocking
+        self.server.setblocking(False)
 
         # lookup dict to match socket -> Session
         self.s_to_session: dict[socket: SessionBase] = {}
@@ -42,36 +43,36 @@ class ServiceBase:
                     killed_sessions.append((session, 'killed quota idle'))
                     continue
 
-                if quota.get('tx', False) and session.ss.tx > quota['tx']:
+                if quota.get('tx', False) and session.num_sent_bytes > quota['tx']:
                     killed_sessions.append((session, 'killed quota tx'))
                     continue
 
-                if quota.get('rx', False) and session.ss.tx > quota['rx']:
+                if quota.get('rx', False) and session.num_received_bytes > quota['rx']:
                     killed_sessions.append((session, 'killed quota rx'))
                     continue
 
             for kill_session in killed_sessions:
-                self._terminate_session(kill_session[0].ss.socket, kill_session[1])
+                self._terminate_session(kill_session[0].s, kill_session[1])
 
 
-    def socket_to_session(self, s: socket) -> SessionBase | SimpleSocket | None:
-        if s == self.serverSo.socket:
-            return self.serverSo
+    def socket_to_session(self, s: socket) -> SessionBase | None:
+        if s == self.server:
+            return self.server
         return self.s_to_session.get(s, None)
 
-    def __simple_socket_to_socket(self, ss: SimpleSocket) -> socket | None:
-        for key, value in self.s_to_session.items():
-            if value == ss:
-                return key
-        return None
-
     def __accept_client(self) -> None:
-        ss = self.serverSo.accept()
-        if ss is not None:
-            self.s_to_session[ss.socket] = self.session(ss, self.serverSo.port)
+        try:
+            # FIXME: client_address is unused
+            client_socket, client_address = self.server.accept()
+        except OSError as e:
+            # TODO: logging
+            return None
+        # TODO: Make client_socket non-blocking
+        if client_socket is not None:
+            self.s_to_session[client_socket] = self.session(client_socket)
 
-    def __close_client(self, ss: SimpleSocket) -> None:
-        self.s_to_session.pop(self.__simple_socket_to_socket(ss))
+    def __close_client(self, s: socket) -> None:
+        self.s_to_session.pop(s)
 
     def get_all_handled_sockets(self) -> list[socket]:
         return list(self.s_to_session.keys())
@@ -88,15 +89,15 @@ class ServiceBase:
         if session is not None:
             self.s_to_session.pop(s)
 
-        conservation = session.conservation
+        conversation = session.conversation
         if reason:
-            conservation.append(f"[c][{get_timestamp()}]: Connection terminated duo to {reason}")
+            conversation.append(f"[c][{get_timestamp()}]: Connection terminated duo to {reason}")
 
-        self.db.add_session(session.session_start, session.ss.ip, session.ss.port, conservation)
+        self.db.add_session(session.session_start, session.remote_ip6, session.remote_port6, conversation)
 
 
     def handle_readable(self, s: socket):
-        if s is self.serverSo.socket:  # handle a new connection
+        if s is self.server:  # handle a new connection
             self.__accept_client()
             return
 
@@ -114,9 +115,9 @@ class ServiceBase:
             if not success:
                 self._terminate_session(s)
 
-    # Returns True, if service crashed duo to server socket error
-    def handle_exeptional(self, s: socket) -> bool:
-        if s is self.serverSo.socket:
+    # Returns True, iff service crashed due to server socket error
+    def handle_exceptions(self, s: socket) -> bool:
+        if s is self.server:
             return True
 
         self._terminate_session(s)

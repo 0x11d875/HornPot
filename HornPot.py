@@ -1,34 +1,32 @@
 import select
 import socket
-import selectors
-from logger import log, Database
-from services.ServiceBase import ServiceBase
+from logger import log
+from services.Service import Service
 
 
 class HornPot:
 
-    def __init__(self, services: [ServiceBase]):
-        self.services: list[ServiceBase] = services
+    def __init__(self, services: [Service]):
+        self.services: list[Service] = services
 
         self.all_sockets: [socket.socket] = []
-        self.clientsWeWantToWrite = []
+        self.write_sockets: list = []
 
         self.run()
 
-
     def update_all_sockets(self):
-            self.all_sockets.clear()
-            for service in self.services:
-                service.check_quota()
-                self.all_sockets += [service.serverSo.socket]
-                self.all_sockets += service.get_all_handled_sockets()
-                self.clientsWeWantToWrite += service.get_all_needs_write_sockets()
+        self.all_sockets.clear()
+        for service in self.services:
+            service.check_quota()
+            self.all_sockets += [service.server]
+            self.all_sockets += service.get_all_handled_sockets()
+            self.write_sockets += service.get_all_needs_write_sockets()
 
-    def socket_to_service(self, soc: socket) -> ServiceBase | None:
-        for serv in self.services:
-            simplSo = serv.socket_to_session(soc)
-            if simplSo is not None:
-                return serv
+    def socket_to_service(self, s: socket) -> Service | None:
+        for service in self.services:
+            server_socket = service.socket_to_session(s)
+            if server_socket is not None:
+                return service
         return None
 
     def run(self):
@@ -39,23 +37,23 @@ class HornPot:
 
             self.update_all_sockets()
 
-            readable, writable, exeptional = select.select(self.all_sockets, self.clientsWeWantToWrite,
-                                                           self.all_sockets, 2)
+            readable, writable, exceptions = select.select(self.all_sockets, self.write_sockets,
+                                                           self.all_sockets, 10)
 
-            for socket in readable:
-                service = self.socket_to_service(socket)
+            for readable_socket in readable:
+                service = self.socket_to_service(readable_socket)
                 if service is not None:
-                    service.handle_readable(socket)
+                    service.handle_readable(readable_socket)
 
-            for socket in writable:
-                service = self.socket_to_service(socket)
+            for writable_socket in writable:
+                service = self.socket_to_service(writable_socket)
                 if service is not None:
-                    service.handle_writable(socket)
+                    service.handle_writable(writable_socket)
 
-            for socket in exeptional:
-                service = self.socket_to_service(socket)
+            for exceptional_socket in exceptions:
+                service = self.socket_to_service(exceptional_socket)
                 if service is not None:
-                    crashed = service.handle_exeptional(socket)
+                    crashed = service.handle_exceptions(exceptional_socket)
                     if crashed:
                         self.services.remove(service)
 
