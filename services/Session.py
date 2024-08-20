@@ -1,13 +1,14 @@
 import socket
 
-from honypot import Service
+
 from logger import log, get_timestamp
+
 
 
 class SessionBase:
 
-    def __init__(self, s: socket, service: Service):
-        self.service: Service = service
+    def __init__(self, s: socket, service):
+        self.service = service
         self.s: socket = s
         self.connected = True
         try:
