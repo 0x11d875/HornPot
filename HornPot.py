@@ -9,26 +9,66 @@ class HornPot:
     def __init__(self, services: [Service]):
         self.services: list[Service] = services
 
-        self.all_sockets: [socket.socket] = []
-        self.write_sockets: list = []
+        self.epoll = select.epoll()
+        self.registered_fileno = set()
+        self.socket_to_service_map = {}
 
         self.run()
 
+    def epoll_unregister(self, fileno):
+        if fileno in self.registered_fileno:
+            self.registered_fileno.remove(fileno)
+            self.epoll.unregister(fileno)
+
+    def epoll_register(self, fileno, events):
+        if fileno not in self.registered_fileno:
+            self.registered_fileno.add(fileno)
+            self.epoll.register(fileno, events)
+
+    def epoll_clear(self):
+        for fileno in self.registered_fileno:
+            try:
+                self.epoll.unregister(fileno)
+            except OSError:
+                pass
+        self.registered_fileno.clear()
+
+
     def update_all_sockets(self):
-        self.all_sockets.clear()
-        self.write_sockets.clear()
+        self.epoll_clear()
+        self.socket_to_service_map.clear()
+
         for service in self.services:
             service.check_quota()
-            self.all_sockets += [service.server]
-            self.all_sockets += service.get_all_handled_sockets()
-            self.write_sockets += service.get_all_needs_write_sockets()
 
-    def socket_to_service(self, s: socket) -> Service | None:
+            self.register_socket(service.server, service)
+
+            want_write = service.get_all_needs_write_sockets()
+            for sock in service.get_all_handled_sockets():
+                if sock in want_write:
+                    self.register_socket(sock, service, writable=True)
+                else:
+                    self.register_socket(sock, service)
+
+    def get_socket_from_fileno(self, fileno: int) -> socket.socket | None:
         for service in self.services:
-            server_socket = service.socket_to_session(s)
-            if server_socket is not None:
-                return service
+            for sock in service.get_all_handled_sockets():
+                if sock.fileno() == fileno:
+                    return sock
+            if service.server.fileno() == fileno:
+                return service.server
         return None
+
+    def register_socket(self, sock: socket.socket, service: Service, writable=False):
+        events = select.EPOLLIN | select.EPOLLERR | select.EPOLLHUP
+        if writable:
+            events |= select.EPOLLOUT
+
+        self.epoll_register(sock.fileno(), events)
+        self.socket_to_service_map[sock.fileno()] = service
+
+    def socket_to_service(self, fileno: int) -> Service | None:
+        return self.socket_to_service_map.get(fileno, None)
 
     def run(self):
 
@@ -38,24 +78,19 @@ class HornPot:
 
             self.update_all_sockets()
 
-            readable, writable, exceptions = select.select(self.all_sockets, self.write_sockets,
-                                                           self.all_sockets, 10)
+            events = self.epoll.poll(10)
 
-            for readable_socket in readable:
-                service = self.socket_to_service(readable_socket)
+            for fileno, event in events:
+                service = self.socket_to_service(fileno)
                 if service is not None:
-                    service.handle_readable(readable_socket)
-
-            for writable_socket in writable:
-                service = self.socket_to_service(writable_socket)
-                if service is not None:
-                    service.handle_writable(writable_socket)
-
-            for exceptional_socket in exceptions:
-                service = self.socket_to_service(exceptional_socket)
-                if service is not None:
-                    crashed = service.handle_exceptions(exceptional_socket)
-                    if crashed:
-                        self.services.remove(service)
+                    sock = self.get_socket_from_fileno(fileno)
+                    if event & select.EPOLLIN:
+                        service.handle_readable(sock)
+                    if event & select.EPOLLOUT:
+                        service.handle_writable(sock)
+                    if event & (select.EPOLLERR | select.EPOLLHUP):
+                        crashed = service.handle_exceptions(sock)
+                        if crashed:
+                            self.services.remove(service)
 
         log(f"HornPot terminates, no services (left).")
