@@ -6,9 +6,15 @@ class SessionBase:
 
     def __init__(self, s: socket):
         self.s: socket = s
+        self.connected = True
+        try:
+            self.own_ip6, self.own_port6, self.own_ip4, self.own_port4 = self.s.getsockname()
+            self.remote_ip6, self.remote_port6, self.remote_ip4, self.remote_port4 = self.s.getpeername()
+        except OSError:
+            # socket may be not connected
+            self.connected = False
+            return
 
-        self.own_ip6, self.own_port6, self.own_ip4, self.own_port4 = self.s.getsockname()
-        self.remote_ip6, self.remote_port6, self.remote_ip4, self.remote_port4 = self.s.getpeername()
 
         # log data
         self.session_start = get_timestamp()
@@ -16,7 +22,7 @@ class SessionBase:
         self.conversation = []
 
         self.message_queue: bytes = b''
-        self.connected = True
+
 
         self.num_sent_bytes = 0
         self.num_received_bytes = 0

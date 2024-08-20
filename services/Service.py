@@ -69,7 +69,9 @@ class Service:
             return None
         # TODO: Make client_socket non-blocking
         if client_socket is not None:
-            self.s_to_session[client_socket] = self.session(client_socket)
+            session = self.session(client_socket)
+            if session.connected:
+                self.s_to_session[client_socket] = session
 
     def __close_client(self, s: socket) -> None:
         self.s_to_session.pop(s)
@@ -86,8 +88,10 @@ class Service:
 
     def _terminate_session(self, s: socket, reason=None) -> None:
         session = self.socket_to_session(s)
-        if session is not None:
-            self.s_to_session.pop(s)
+        if session is None:
+            return
+
+        self.s_to_session.pop(s)
 
         conversation = session.conversation
         if reason:
