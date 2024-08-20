@@ -93,11 +93,10 @@ class Service:
 
         self.s_to_session.pop(s)
 
-        conversation = session.conversation
-        if reason:
-            conversation.append(f"[c][{get_timestamp()}]: Connection terminated duo to {reason}")
+        if session.termination_reason == "":
+            session.termination_reason = reason
 
-        self.db.add_session(session.session_start, session.remote_ip6, session.remote_port6, conversation)
+        self.db.add_session(session)
 
 
     def handle_readable(self, s: socket):
