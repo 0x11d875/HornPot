@@ -69,7 +69,7 @@ class Service:
             return None
         # TODO: Make client_socket non-blocking
         if client_socket is not None:
-            session = self.session(client_socket)
+            session = self.session(client_socket, self)
             if session.connected:
                 self.s_to_session[client_socket] = session
 

@@ -1,20 +1,23 @@
 import socket
+
+from honypot import Service
 from logger import log, get_timestamp
 
 
 class SessionBase:
 
-    def __init__(self, s: socket):
+    def __init__(self, s: socket, service: Service):
+        self.service: Service = service
         self.s: socket = s
         self.connected = True
         try:
             self.own_ip6, self.own_port6, self.own_ip4, self.own_port4 = self.s.getsockname()
             self.remote_ip6, self.remote_port6, self.remote_ip4, self.remote_port4 = self.s.getpeername()
+            log(f"New session from {self.remote_ip6}:{self.remote_port6} at port {self.own_port6}.",
+                f"{self.__class__.__name__}:{self.service.port}")
         except OSError:
             # socket may be not connected
             self.connected = False
-            return
-
 
         # log data
         self.session_start = get_timestamp()
@@ -27,11 +30,12 @@ class SessionBase:
         self.num_sent_bytes = 0
         self.num_received_bytes = 0
 
-        log(f"New session from {self.remote_ip6}:{self.remote_port6} at port {self.own_port6}.", self.__class__.__name__)
 
     def __del__(self):
-        log(f"Disconnecting client {self.remote_ip6}:{self.remote_port6} at port {self.own_port6}.",
-            self.__class__.__name__)
+        try:
+            log(f"Disconnecting client {self.remote_ip6}:{self.remote_port6} at port {self.own_port6}.", f'{self.__class__.__name__}:{self.service.port}')
+        except:
+            pass
         try:
             self.s.shutdown(socket.SHUT_RDWR)
         except:
@@ -63,7 +67,7 @@ class SessionBase:
 
         self.last_active = get_timestamp()
         self.conversation.append(f'[r][{get_timestamp()}]: {msg}')
-        log(f"Read from {self.remote_ip6}:{self.remote_port6} '{msg}'.", self.__class__.__name__)
+        log(f"Read from {self.remote_ip6}:{self.remote_port6} '{msg}'.", f'{self.__class__.__name__}:{self.service.port}')
         # TODO log message and handle it
         return msg
 
@@ -85,7 +89,7 @@ class SessionBase:
         if sent <= 0:
             return False
 
-        log(f"Send to {self.remote_ip6}:{self.remote_port6} '{self.message_queue[:sent]}'.", self.__class__.__name__)
+        log(f"Send to {self.remote_ip6}:{self.remote_port6} '{self.message_queue[:sent]}'.", f'{self.__class__.__name__}:{self.service.port}')
 
         self.num_sent_bytes += sent
 
