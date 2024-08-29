@@ -53,6 +53,7 @@ class Service:
 
             for kill_session in killed_sessions:
                 self._terminate_session(kill_session[0].s, kill_session[1])
+            return killed_sessions
 
 
     def socket_to_session(self, s: socket) -> SessionBase | None:
@@ -98,6 +99,7 @@ class Service:
             session.termination_reason = reason
 
         self.db.add_session(session)
+        session.disconnect()
 
 
     def handle_readable(self, s: socket):

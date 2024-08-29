@@ -39,12 +39,14 @@ class SessionBase:
             self.connected = False
 
 
-
-    def __del__(self):
+    def disconnect(self):
         try:
             log(f"Disconnected: {self.remote_ip6}:{self.remote_port6}.", f'{self.__class__.__name__}:{self.service.port}')
-        except:
+        except Exception as e:
+            print(f"ERROR {e}")
             pass
+        return
+        # ignore shutdown, otherwise fd -1 problems using epoll.unregister
         try:
             self.s.shutdown(socket.SHUT_RDWR)
         except:
@@ -53,6 +55,7 @@ class SessionBase:
             self.s.close()
         except:
             pass
+
 
     def wants_write(self) -> bool:
         return len(self.message_queue) != 0

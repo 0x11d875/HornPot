@@ -10,7 +10,6 @@ class HornPot:
         self.services: list[Service] = services
 
         self.epoll = select.epoll()
-        self.registered_fileno = set()
         self.socket_to_service_map = {}
 
         self.run()
@@ -21,6 +20,7 @@ class HornPot:
             self.epoll.unregister(fileno)
         except OSError:
             pass
+        self.socket_to_service_map.pop(fileno)
 
     def epoll_register(self, fileno, events):
         print(f"Register {fileno}")
@@ -48,9 +48,6 @@ class HornPot:
         self.epoll_register(fileno, events)
         self.socket_to_service_map[fileno] = service
 
-    def socket_to_service(self, fileno: int) -> Service | None:
-        return self.socket_to_service_map.get(fileno, None)
-
     def run(self):
 
         log(f"HornPot is running with {len(self.services)} services.")
@@ -61,13 +58,15 @@ class HornPot:
         while len(self.services) != 0:
 
             for service in self.services:
-                service.check_quota()
+                killed_sessions = service.check_quota()
+                for killed_session in killed_sessions:
+                    self.epoll_unregister(killed_session[0].s.fileno())
 
             events = self.epoll.poll(10)
 
             for fileno, event in events:
                 print(f"Event: {fileno}, {events}")
-                service = self.socket_to_service(fileno)
+                service = self.socket_to_service_map.get(fileno, None)
 
                 if service is not None:
                     sock = self.get_socket_from_fileno(fileno)
