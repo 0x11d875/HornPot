@@ -60,7 +60,7 @@ class Service:
             return self.server
         return self.s_to_session.get(s, None)
 
-    def __accept_client(self) -> None:
+    def __accept_client(self) -> socket:
         try:
             # FIXME: client_address is unused
             client_socket, client_address = self.server.accept()
@@ -72,6 +72,7 @@ class Service:
             session = self.session(client_socket, self)
             if session.connected:
                 self.s_to_session[client_socket] = session
+            return client_socket
 
     def __close_client(self, s: socket) -> None:
         self.s_to_session.pop(s)
@@ -100,23 +101,43 @@ class Service:
 
 
     def handle_readable(self, s: socket):
+        client_connected = False
+        client_socket = None
+        client_wants_write = False
         if s is self.server:  # handle a new connection
-            self.__accept_client()
-            return
+            client_connected = True
+            client_socket = self.__accept_client()
+
+        else:
+            session = self.socket_to_session(s)
+            if session is not None:
+                client_connected = session.read_from_socket()
+                if not client_connected:
+                    self._terminate_session(s)
+                    return False, None, False
+
+                if session.wants_write():
+                    client_wants_write = True
+                
+        return client_connected, client_socket, client_wants_write
+    
+
+
+    def handle_writable(self, s: socket) -> bool:
+        client_connected = False
+        client_wants_to_write = False
 
         session = self.socket_to_session(s)
-        if session is not None:
-            success = session.read_from_socket()
-            if not success:
-                self._terminate_session(s)
 
-
-    def handle_writable(self, s: socket):
-        session = self.socket_to_session(s)
         if session is not None:
             success = session.send_message()
             if not success:
                 self._terminate_session(s)
+                return client_connected, client_wants_to_write
+            client_connected = True
+
+        client_wants_to_write = session.wants_write()
+        return client_connected, client_wants_to_write
 
     # Returns True, iff service crashed due to server socket error
     def handle_exceptions(self, s: socket) -> bool:
