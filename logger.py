@@ -1,6 +1,11 @@
+import ast
 import datetime
+import json
+import re
 import sqlite3
+import sys
 import time
+from functools import lru_cache
 
 TIMEFORMAT = '%Y-%m-%dT%H:%M:%S.%f'
 
@@ -19,47 +24,102 @@ def log(msg, module=None):
     with open("log.txt", 'a') as f:
         f.write(full_message)
 
+def print_progress(current: float, total: float = 0, msg: str = "") -> None:
+    if total == 0:
+        sys.stdout.write(f"\r{msg} {int(current)}")
+        sys.stdout.flush()
+    else:
+        percent = (current / total) * 100
+        sys.stdout.write(f"\r{msg} {current} / {total} = {percent:.4f}%")
+        sys.stdout.flush()
 
 
 
 
 
 class Database:
+    # VERISON NOTES:
+    # 0.0.1 -> 0.0.2: Added messages table
 
     def __init__(self):
         self.con = sqlite3.connect('connections.db')
         self.cur = self.con.cursor()
 
-        self.VERSION = "0.0.1"
+        self.VERSION = "0.0.2"
         self.current_version = "0.0.0"
+        self.message_cache = {}
+
+
 
         self.init()
         self.upgrade()
 
     def __del__(self):
+        self.con.commit()
         self.con.close()
 
+    def __update_version(self, old, new):
+        insert_query = """INSERT INTO "database_version" 
+                          ("timestamp", "old_version", "current_version")
+                          VALUES (?, ?, ?)"""
+        self.cur.execute(insert_query, (get_timestamp(), old, new))
+        self.con.commit()
 
     def upgrade(self):
-        # TODO
-        return
 
-        last_version = self.current_version
+        last_version = None
 
         while last_version != self.VERSION:
             self.cur.execute('SELECT "current_version" FROM "database_version" ORDER BY "id" DESC LIMIT 1')
-            last_version = self.cur.fetchone()
-            if last_version is None or last_version == self.VERSION:
+            last_version = self.cur.fetchone()[0]
+            if last_version == self.VERSION:
                 break
 
-            if last_version == "0.0.0":
-                insert_query = """INSERT INTO "database_version" 
-                                  ("timestamp", "old_version", "current_version")
-                                  VALUES (?, ?, ?)"""
-                self.cur.execute(insert_query, (get_timestamp(), "0.0.0", "0.0.1"))
+            if last_version is None:
+                print(f"DB update {last_version} -> 0.0.1")
+                self.__update_version("0.0.0", "0.0.1")
                 self.con.commit()
 
+            elif last_version == "0.0.1":
+                print(f"DB update {last_version} -> 0.0.2")
+                self.cur.execute("SELECT id, conversation FROM sessions")
+                sessions = self.cur.fetchall()
+                # batch size for committing
+                batch_size = 100000
+                batch_count = 0
 
+                pattern = r"(\[[rt]\])(\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}\]): (b'.*')"
+
+                for session_id, conversation in sessions:
+                    if conversation == '[]':
+                        continue
+                    conversation_lst = ast.literal_eval(conversation)
+                    new_conversation = []
+                    for message in conversation_lst:
+                        match = re.match(pattern, message)
+                        if match:
+                            # Extract the groups
+                            direction = match.group(1).replace("[", "").replace("]", "")
+                            timestamp = match.group(2).replace("[", "").replace("]", "")
+                            message_content = match.group(3)
+
+                            message_id = self.get_or_insert_message(message_content)
+
+                            new_conversation.append((direction, timestamp, message_id))
+
+                    conversation_json = json.dumps(new_conversation)
+                    print_progress(session_id, len(sessions), f"Updating conversations... {conversation_json}")
+                    self.cur.execute("UPDATE sessions SET conversation = ? WHERE id = ?", (conversation_json, session_id))
+
+                    batch_count += 1
+                    if batch_count % batch_size == 0:
+                        self.con.commit()
+
+                self.con.commit()
+                self.cur.execute("VACUUM;")
+
+                self.__update_version(last_version, "0.0.2")
+                self.con.commit()
 
     def init(self):
         connections_table = """CREATE TABLE IF NOT EXISTS "sessions" (
@@ -77,6 +137,13 @@ class Database:
 
         self.cur.execute(connections_table)
 
+
+        message_table = """CREATE TABLE IF NOT EXISTS "messages" (
+                            "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+                            "message" BLOB
+                            );"""
+
+        self.cur.execute(message_table)
 
 
         version_Table = """CREATE TABLE IF NOT EXISTS "database_version" (
@@ -100,7 +167,39 @@ class Database:
             self.con.commit()
 
 
+    def get_or_insert_message(self, message):
+        if message in self.message_cache:
+            return self.message_cache[message]
+
+        self.cur.execute("SELECT id FROM messages WHERE message = ?", (message,))
+        result = self.cur.fetchone()
+
+        if result:
+            message_id = result[0]
+        else:
+            self.cur.execute("INSERT INTO messages (message) VALUES (?)", (message,))
+            message_id = self.cur.lastrowid
+
+        self.message_cache[message] = message_id
+        return message_id
+
+
     def add_session(self, session):
+
+        conversation_prepared = []
+        pattern = r"(\[[rt]\])(\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}\]): (b'.*')"
+        for message in session.conversation:
+            match = re.match(pattern, message)
+            if match:
+                # Extract the groups
+                direction = match.group(1).replace("[", "").replace("]", "")
+                timestamp = match.group(2).replace("[", "").replace("]", "")
+                message_content = match.group(3)
+
+                message_id = self.get_or_insert_message(message_content)
+
+                conversation_prepared.append((direction, timestamp, message_id))
+
         insert_query = """
         INSERT INTO sessions (start_time, client_ip, client_port, server_port, session_handler, conversation, end_time, disconnected_reason, downloads) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -110,8 +209,8 @@ class Database:
                                         str(session.remote_port6),
                                         str(session.own_port6),
                                         str(str(session.__class__.__name__)),
-                                        str(session.conversation),
-                                        str(session.session_end),
+                                        str(json.dumps(conversation_prepared)),
+                                        str(get_timestamp()),
                                         str(session.termination_reason),
                                         str(session.downloads)))
         self.con.commit()
