@@ -109,6 +109,7 @@ class Service:
         if s is self.server:  # handle a new connection
             client_connected = True
             client_socket = self.__accept_client()
+            session = self.socket_to_session(client_socket)
 
         else:
             session = self.socket_to_session(s)
@@ -118,8 +119,8 @@ class Service:
                     self._terminate_session(s)
                     return False, None, False
 
-                if session.wants_write():
-                    client_wants_write = True
+        if session.wants_write():
+            client_wants_write = True
                 
         return client_connected, client_socket, client_wants_write
     

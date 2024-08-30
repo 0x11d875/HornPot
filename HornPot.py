@@ -77,7 +77,7 @@ class HornPot:
                             continue
                         if c_socket is not None:
                             # add new client
-                            self.register_socket(c_socket, service, False)
+                            self.register_socket(c_socket, service, c_wants_write)
                         if c_wants_write:
                             self.epoll_unregister(fileno)
                             self.register_socket(fileno, service, True)
