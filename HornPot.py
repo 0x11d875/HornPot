@@ -15,7 +15,7 @@ class HornPot:
         self.run()
 
     def epoll_unregister(self, fileno):
-        print(f"Unregister {fileno}")
+        #print(f"Unregister {fileno}")
         try:
             self.epoll.unregister(fileno)
         except OSError:
@@ -23,7 +23,7 @@ class HornPot:
         self.socket_to_service_map.pop(fileno)
 
     def epoll_register(self, fileno, events):
-        print(f"Register {fileno}")
+        #print(f"Register {fileno}")
         self.epoll.register(fileno, events)
 
     def get_socket_from_fileno(self, fileno: int) -> socket.socket | None:
@@ -65,7 +65,6 @@ class HornPot:
             events = self.epoll.poll(10)
 
             for fileno, event in events:
-                print(f"Event: {fileno}, {events}")
                 service = self.socket_to_service_map.get(fileno, None)
 
                 if service is not None:
