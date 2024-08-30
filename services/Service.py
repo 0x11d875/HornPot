@@ -119,7 +119,7 @@ class Service:
                     self._terminate_session(s)
                     return False, None, False
 
-        if session.wants_write():
+        if session is not None and session.wants_write():
             client_wants_write = True
                 
         return client_connected, client_socket, client_wants_write
