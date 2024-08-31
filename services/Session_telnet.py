@@ -75,6 +75,7 @@ class SessionTelnet(SessionBase):
 
     def simulate_bash(self, msg):
 
+        end = True
 
         msg = msg.strip()
 
@@ -113,6 +114,10 @@ class SessionTelnet(SessionBase):
         elif msg.lower().startswith("sh"):
             pass
 
+        elif msg.lower() == "root":
+            self.message_queue += b"password: "
+            end = False
+
         elif msg.lower == "while read i;do busybox":
             # "simulates busybox"
             pass
@@ -134,6 +139,8 @@ class SessionTelnet(SessionBase):
         else:
             self.message_queue += b"command not found"
 
+        return end
+
     def read_from_socket(self):
         msg = self._read_from_socket()
         if msg is None:
@@ -146,12 +153,15 @@ class SessionTelnet(SessionBase):
         commands = re.split(r';|\|\|', msg)
         commands = [cmd.strip() for cmd in commands]
 
+        append_end = True
         for command in commands:
             if len(command) == 0:
                 continue
-            self.simulate_bash(command)
-            self.message_queue += b"\r\n"
+            append_end &= self.simulate_bash(command)
+            if append_end:
+                self.message_queue += b"\r\n"
 
-        self.message_queue += b"$ "
+        if append_end:
+            self.message_queue += b"$ "
 
         return True
