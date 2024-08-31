@@ -79,16 +79,18 @@ class SessionTelnet(SessionBase):
 
         msg = msg.strip()
 
-        if msg.lower() == "whoami":
+        if msg == "whoami":
             self.message_queue += b"root"
 
-        elif msg.lower() == "pwd":
+        elif msg == "pwd":
             self.message_queue += b"/home/root"
 
-        elif msg.lower() == "uname -a":
+        elif msg == "uname -a":
             self.message_queue += b"Linux ubuntu 6.8.0-31-generic #31-Ubuntu SMP PREEMPT_DYNAMIC Sat Apr 20 00:40:06 UTC 2024 x86_64 x86_64 x86_64 GNU/Linux"
 
-        elif "echo" in msg.lower():
+        elif "echo" in msg:
+            # attacks using echo -e "SOMEHEX" to check if the bash is working,
+            # so we need to make sure we send them this string in ASCII back
 
             index = msg.find("echo ")
             if index != -1:
@@ -107,42 +109,43 @@ class SessionTelnet(SessionBase):
                     print(f"Decoding failed: {e}")
 
 
-        elif msg.lower() == "ls":
+        elif msg == "ls":
             self.message_queue += b".ssh  .bashrc  .bash_history"
 
-        elif msg.lower().startswith("cd "):
+        elif msg.startswith("cd "):
             pass
 
-        elif msg.lower() == ("ping"):
+        elif msg == ("ping"):
             self.message_queue += b"ping: usage error: Destination address required"
 
-        elif msg.lower().startswith("sh"):
+        elif msg.startswith("sh"):
             pass
 
-        elif msg.lower() == "root":
+        elif msg == "root":
             self.message_queue += b"password: "
             end = False
 
-        elif msg.lower == "while read i;do busybox":
+        elif msg == "while read i;do busybox":
             # "simulates busybox"
             pass
 
-        elif msg.lower() == "date":
+        elif msg == "date":
             import datetime
             current_date = datetime.datetime.now().strftime("%a %b %d %H:%M:%S %Y")
             self.message_queue += current_date.encode()
 
-        elif msg.lower().startswith("cat "):
-            if msg.lower == "cat /proc/self/exe":
+        elif msg.startswith("cat "):
+            if msg == "cat /proc/self/exe":
                 self.message_queue += fake_exe_response
             else:
                 self.message_queue += b"Oh no, dont read my secrets pls"
 
-        elif msg.lower() == "uptime":
+        elif msg == "uptime":
             self.message_queue += b" 10:23:01 up 2 days,  3:45,  1 user,  load average: 0.05, 0.02, 0.01"
 
         else:
-            self.message_queue += b"command not found"
+            pass
+            #self.message_queue += b"command not found"
 
         return end
 
