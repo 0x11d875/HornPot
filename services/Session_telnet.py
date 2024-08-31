@@ -1,5 +1,8 @@
+import codecs
+import re
 import socket
 
+from message_handler import bytes_to_string
 from services.Session import SessionBase
 
 # Telnet control characters
@@ -27,11 +30,35 @@ welcome_message = (
     b"\r\n"
     b"The list of available updates is more than a week old.\r\n"
     b"To check for new updates run: sudo apt update\r\n"
-    b"Failed to connect to https://changelogs.ubuntu.com/meta-release-lts. Check your Internet connection or proxy settings\r\n"
     b"\r\n"
     b"\r\n"
 
 )
+
+
+# Example ELF header for an x86_64 binary
+elf_header = bytes([
+    0x7f, 0x45, 0x4c, 0x46,  # ELF Magic Number
+    0x02, 0x01, 0x01, 0x00,  # 64-bit, little-endian, ELF version 1
+    0x00, 0x00, 0x00, 0x00,  # ABI and padding
+    0x00, 0x00, 0x00, 0x00,  # Padding
+    0x02, 0x00, 0x3e, 0x00,  # Type (Executable), Machine (x86_64)
+    0x01, 0x00, 0x00, 0x00,  # ELF version
+    0x78, 0x00, 0x40, 0x00,  # Entry point address
+    0x00, 0x00, 0x00, 0x00,  # Program header table offset
+    0x40, 0x00, 0x00, 0x00,  # Section header table offset
+    0x00, 0x00, 0x00, 0x00,  # Flags
+    0x40, 0x00, 0x38, 0x00,  # ELF header size, Program header entry size
+    0x01, 0x00, 0x00, 0x00,  # Program header entry count, Section header entry size
+    0x00, 0x00, 0x00, 0x00   # Section header entry count, Section header string table index
+])
+
+# Dummy ELF program data
+program_data = bytes([0x48, 0x31, 0xC0, 0xC3])  # Assembly for 'xor rax, rax; ret'
+
+# Combine ELF header with program data to create the full executable binary response
+fake_exe_response = elf_header + program_data
+
 
 
 class SessionTelnet(SessionBase):
@@ -46,29 +73,85 @@ class SessionTelnet(SessionBase):
         self.message_queue += b'$ '
 
 
+    def simulate_bash(self, msg):
+
+
+        msg = msg.strip()
+
+        if msg.lower() == "whoami":
+            self.message_queue += b"root"
+
+        elif msg.lower() == "pwd":
+            self.message_queue += b"/home/root"
+
+        elif msg.lower() == "uname -a":
+            self.message_queue += b"Linux ubuntu 6.8.0-31-generic #31-Ubuntu SMP PREEMPT_DYNAMIC Sat Apr 20 00:40:06 UTC 2024 x86_64 x86_64 x86_64 GNU/Linux"
+
+        elif msg.lower().startswith("echo"):
+            msg = msg.replace("echo", "").strip()
+            if msg.lower().startswith("-e"):
+                msg = msg.replace("-e", "").strip()
+                try:
+                    #remove "
+
+                    msg = msg.replace("\\\\", "\\").replace("\"", "")
+                    decoded_string = codecs.decode(msg, 'unicode_escape')
+                    self.message_queue += decoded_string.encode('ascii')
+                except (UnicodeDecodeError, ValueError) as e:
+                    print(f"Decoding failed: {e}")
+
+
+        elif msg.lower() == "ls":
+            self.message_queue += b".ssh  .bashrc  .bash_history"
+
+        elif msg.lower().startswith("cd "):
+            pass
+
+        elif msg.lower() == ("ping"):
+            self.message_queue += b"ping: usage error: Destination address required"
+
+        elif msg.lower().startswith("sh"):
+            pass
+
+        elif msg.lower == "while read i;do busybox":
+            # "simulates busybox"
+            pass
+
+        elif msg.lower() == "date":
+            import datetime
+            current_date = datetime.datetime.now().strftime("%a %b %d %H:%M:%S %Y")
+            self.message_queue += current_date.encode()
+
+        elif msg.lower().startswith("cat "):
+            if msg.lower == "cat /proc/self/exe":
+                self.message_queue += fake_exe_response
+            else:
+                self.message_queue += b"Oh no, dont read my secrets pls"
+
+        elif msg.lower() == "uptime":
+            self.message_queue += b" 10:23:01 up 2 days,  3:45,  1 user,  load average: 0.05, 0.02, 0.01"
+
+        else:
+            self.message_queue += b"command not found"
+
     def read_from_socket(self):
         msg = self._read_from_socket()
         if msg is None:
             return False
 
-        if msg.lower() == b"whoami\n":
-            self.message_queue += b"root\r\n$ "
-        elif msg.lower() == b"pwd\n":
-            self.message_queue += b"/home/root\r\n$ "
-        elif msg.lower() == b"ls\n":
-            self.message_queue += b".ssh  .bashrc  .bash_history\r\n$ "
-        elif msg.lower().startswith(b"cd "):
-            self.message_queue += b"$ "
-        elif msg.lower() == b"date\n":
-            import datetime
-            current_date = datetime.datetime.now().strftime("%a %b %d %H:%M:%S %Y")
-            self.message_queue += current_date.encode() + b"\r\n$ "
-        elif msg.lower().startswith(b"cat "):
-            self.message_queue += b"Oh no, dont read my secrets pls\r\n$ "
-        elif msg.lower() == b"uptime\n":
-            self.message_queue += b" 10:23:01 up 2 days,  3:45,  1 user,  load average: 0.05, 0.02, 0.01\r\n$ "
+        msg = bytes_to_string(msg)
+        if msg is None:
+            return True
 
-        else:
-            self.message_queue += b"command not found\r\n$ "
+        commands = re.split(r';|\|\|', msg)
+        commands = [cmd.strip() for cmd in commands]
+
+        for command in commands:
+            if len(command) == 0:
+                continue
+            self.simulate_bash(command)
+            self.message_queue += b"\r\n"
+
+        self.message_queue += b"$ "
 
         return True
