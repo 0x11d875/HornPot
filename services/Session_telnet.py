@@ -88,7 +88,12 @@ class SessionTelnet(SessionBase):
         elif msg.lower() == "uname -a":
             self.message_queue += b"Linux ubuntu 6.8.0-31-generic #31-Ubuntu SMP PREEMPT_DYNAMIC Sat Apr 20 00:40:06 UTC 2024 x86_64 x86_64 x86_64 GNU/Linux"
 
-        elif msg.lower().startswith("echo"):
+        elif "echo" in msg.lower():
+
+            index = msg.find("echo ")
+            if index != -1:
+                msg =  msg[index:]
+
             msg = msg.replace("echo", "").strip()
             if msg.lower().startswith("-e"):
                 msg = msg.replace("-e", "").strip()
