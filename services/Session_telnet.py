@@ -76,17 +76,18 @@ class SessionTelnet(SessionBase):
     def simulate_bash(self, msg):
 
         end = True
+        response = b""
 
         msg = msg.strip()
 
         if msg == "whoami":
-            self.message_queue += b"root"
+            response += b"root"
 
         elif msg == "pwd":
-            self.message_queue += b"/home/root"
+            response += b"/home/root"
 
         elif msg == "uname -a":
-            self.message_queue += b"Linux ubuntu 6.8.0-31-generic #31-Ubuntu SMP PREEMPT_DYNAMIC Sat Apr 20 00:40:06 UTC 2024 x86_64 x86_64 x86_64 GNU/Linux"
+            response += b"Linux ubuntu 6.8.0-31-generic #31-Ubuntu SMP PREEMPT_DYNAMIC Sat Apr 20 00:40:06 UTC 2024 x86_64 x86_64 x86_64 GNU/Linux"
 
         elif "echo" in msg:
             # attacks using echo -e "SOMEHEX" to check if the bash is working,
@@ -101,7 +102,7 @@ class SessionTelnet(SessionBase):
             ## was successfull. The first one is then e.g.  first written into a file using >
 
             if ">" in msg:
-                return False
+                return False, response
 
             msg = msg.replace("echo", "").strip()
             if "-n" in msg or "-ne" in msg or "-en" in msg:
@@ -112,27 +113,27 @@ class SessionTelnet(SessionBase):
                 msg = msg.strip()
 
                 try:
-                    msg = msg.replace("\\\\", "\\").replace("\"", "")
+                    msg = msg.replace("\\\\", "\\").replace("\"", "").replace("'", "")
                     decoded_string = codecs.decode(msg, 'unicode_escape')
-                    self.message_queue += decoded_string.encode('ascii')
+                    response += decoded_string.encode('ascii')
                 except (UnicodeDecodeError, ValueError) as e:
                     print(f"Decoding failed: {e}")
 
 
         elif msg == "ls":
-            self.message_queue += b".ssh  .bashrc  .bash_history"
+            response += b".ssh  .bashrc  .bash_history"
 
         elif msg.startswith("cd "):
             pass
 
         elif msg == ("ping"):
-            self.message_queue += b"ping: usage error: Destination address required"
+            response += b"ping: usage error: Destination address required"
 
         elif msg.startswith("sh"):
             pass
 
         elif msg == "root":
-            self.message_queue += b"password: "
+            response += b"password: "
             end = False
 
         elif msg == "while read i;do busybox":
@@ -142,22 +143,22 @@ class SessionTelnet(SessionBase):
         elif msg == "date":
             import datetime
             current_date = datetime.datetime.now().strftime("%a %b %d %H:%M:%S %Y")
-            self.message_queue += current_date.encode()
+            response += current_date.encode()
 
         elif msg.startswith("cat "):
             if msg == "cat /proc/self/exe":
-                self.message_queue += fake_exe_response
+                response += fake_exe_response
             else:
-                self.message_queue += b"Oh no, dont read my secrets pls"
+                response += b"Oh no, dont read my secrets pls"
 
         elif msg == "uptime":
-            self.message_queue += b" 10:23:01 up 2 days,  3:45,  1 user,  load average: 0.05, 0.02, 0.01"
+            response += b" 10:23:01 up 2 days,  3:45,  1 user,  load average: 0.05, 0.02, 0.01"
 
         else:
             pass
-            #self.message_queue += b"command not found"
+            #response += b"command not found"
 
-        return end
+        return end, response
 
     def read_from_socket(self):
         msg = self._read_from_socket()
@@ -172,10 +173,16 @@ class SessionTelnet(SessionBase):
         commands = [cmd.strip() for cmd in commands]
 
         append_end = True
+        responses = []
         for command in commands:
             if len(command) == 0:
                 continue
-            append_end &= self.simulate_bash(command)
+            end, resp = self.simulate_bash(command)
+            append_end &= end
+            responses.append(resp)
+
+        for response in responses:
+            self.message_queue += response
             if append_end:
                 self.message_queue += b"\r\n"
 
