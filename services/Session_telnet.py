@@ -94,7 +94,14 @@ class SessionTelnet(SessionBase):
 
             index = msg.find("echo ")
             if index != -1:
-                msg =  msg[index:]
+                msg = msg[index:]
+
+
+            ### sometimes injections have first an echo -e for its payload, then a second one for the check if it
+            ## was successfull. The first one is then e.g.  first written into a file using >
+
+            if ">" in msg:
+                return False
 
             msg = msg.replace("echo", "").strip()
             if msg.lower().startswith("-e"):
