@@ -104,11 +104,14 @@ class SessionTelnet(SessionBase):
                 return False
 
             msg = msg.replace("echo", "").strip()
-            if msg.lower().startswith("-e"):
-                msg = msg.replace("-e", "").strip()
-                try:
-                    #remove "
+            if "-n" in msg or "-ne" in msg or "-en" in msg:
+                end = False
 
+            if "-ne" in msg or "-e" in msg or "-en" in msg:
+                msg = msg.replace("-ne", "").replace("-en", "").replace("-e", "").replace("-n", "")
+                msg = msg.strip()
+
+                try:
                     msg = msg.replace("\\\\", "\\").replace("\"", "")
                     decoded_string = codecs.decode(msg, 'unicode_escape')
                     self.message_queue += decoded_string.encode('ascii')
