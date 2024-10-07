@@ -5,12 +5,19 @@ import re
 import sqlite3
 import sys
 import time
-from functools import lru_cache
+import pytz
 
-TIMEFORMAT = '%Y-%m-%dT%H:%M:%S.%f'
+
+TIMEFORMAT = '%Y-%m-%dT%H:%M:%S.%f%z'
+
 
 def get_timestamp():
-    return str(datetime.datetime.fromtimestamp(time.time()).strftime(TIMEFORMAT))
+    # Get current time with Berlin timezone
+    berlin_tz = pytz.timezone('Europe/Berlin')
+    current_time = datetime.fromtimestamp(time.time(), berlin_tz)
+
+    # Return the timestamp in ISO format with timezone info
+    return current_time.strftime(TIMEFORMAT)
 
 def log(msg, module=None):
 
@@ -35,13 +42,49 @@ def print_progress(current: float, total: float = 0, msg: str = "") -> None:
 
 
 
+class Influx:
+
+    def __init__(self, config_module):
+        self.client = None
+        try:
+            from influxdb import InfluxDBClient
+            host = config_module.influx_hostname
+            port = config_module.influx_port
+            username = config_module.influx_username
+            password = config_module.influx_password
+            database = config_module.influx_database_name
+            self.client = InfluxDBClient(host, port, username, password, database)
+            print("client ok")
+        except Exception as e:
+            self.client = None
+            print(e)
+
+    def add_session(self, session):
+        try:
+            data = {
+                "measurement": "connection",
+                "tags": {"session_handler": str(session.__class__.__name__)},
+                "time": session.session_start,
+                "fields": {"server_port": session.own_port6,
+                           "client_port": session.remote_port6,
+                           "client_ip": session.remote_ip6,
+                           "disconnect_reason": str(session.termination_reason)}
+            }
+
+            self.client.write_points([data])
+            print(f"Data submitted: {data}")
+
+        except Exception as e:
+            print(f"Error submitting data: {e}")
+
 
 
 class Database:
     # VERISON NOTES:
     # 0.0.1 -> 0.0.2: Added messages table
 
-    def __init__(self):
+    def __init__(self, config_module):
+        self.config_module = config_module
         self.con = sqlite3.connect('connections.db')
         self.cur = self.con.cursor()
 
@@ -108,7 +151,7 @@ class Database:
                             new_conversation.append((direction, timestamp, message_id))
 
                     conversation_json = json.dumps(new_conversation)
-                    print_progress(session_id, len(sessions), f"Updating conversations... {conversation_json}")
+                    print_progress(session_id, len(sessions), f"Updating conversations...")
                     self.cur.execute("UPDATE sessions SET conversation = ? WHERE id = ?", (conversation_json, session_id))
 
                     batch_count += 1
@@ -129,7 +172,7 @@ class Database:
                             "client_ip"	TEXT,
                             "client_port"	TEXT,
                             "server_port"	TEXT,
-                            "session_handler"	TEXT,
+                            "session_hand ler"	TEXT,
                             "conversation"	TEXT,
                             "disconnected_reason" TEXT,
                             "downloads"	TEXT
@@ -214,3 +257,7 @@ class Database:
                                         str(session.termination_reason),
                                         str(session.downloads)))
         self.con.commit()
+
+        if self.config_module.influx_enabled:
+            influx_client = Influx(self.config_module)
+            influx_client.add_session(session)
