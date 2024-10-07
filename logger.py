@@ -1,5 +1,5 @@
 import ast
-import datetime
+from datetime import datetime
 import json
 import re
 import sqlite3
@@ -12,11 +12,9 @@ TIMEFORMAT = '%Y-%m-%dT%H:%M:%S.%f%z'
 
 
 def get_timestamp():
-    # Get current time with Berlin timezone
     berlin_tz = pytz.timezone('Europe/Berlin')
     current_time = datetime.fromtimestamp(time.time(), berlin_tz)
 
-    # Return the timestamp in ISO format with timezone info
     return current_time.strftime(TIMEFORMAT)
 
 def log(msg, module=None):
