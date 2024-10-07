@@ -49,7 +49,7 @@ args = parser.parse_args()
 config_module = load_config(args.config_path)
 
 
-db = Database()
+db = Database(config_module)
 services = []
 for service_config in config_module.service_configs:
     # todo, does not work since we outsourced the config
