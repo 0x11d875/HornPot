@@ -61,7 +61,10 @@ class Influx:
         try:
             data = {
                 "measurement": "connection",
-                "tags": {"session_handler": str(session.__class__.__name__), "server_port": session.own_port6},
+                "tags": {"session_handler": str(session.__class__.__name__), "server_port": session.own_port6,
+                           "client_port": session.remote_port6,
+                           "client_ip": session.remote_ip6,
+                           "disconnect_reason": str(session.termination_reason)},
                 "time": session.session_start,
                 "fields": {"server_port": session.own_port6,
                            "client_port": session.remote_port6,
