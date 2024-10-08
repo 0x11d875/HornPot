@@ -1,6 +1,8 @@
 import socket
 from datetime import datetime
-from logger import log, Database, get_timestamp, TIMEFORMAT, Influx
+
+from influx import Influx
+from logger import log, Database, get_timestamp, TIMEFORMAT
 from services.Session import SessionBase
 
 
