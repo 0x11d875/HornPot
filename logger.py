@@ -6,7 +6,9 @@ import sqlite3
 import sys
 import time
 import pytz
+from requests import Session
 
+from services.Session import SessionBase
 
 TIMEFORMAT = '%Y-%m-%dT%H:%M:%S.%f%z'
 
@@ -57,18 +59,20 @@ class Influx:
             self.client = None
             print(e)
 
-    def add_session(self, session):
+    def add_session(self, session: SessionBase):
         try:
             data = {
                 "measurement": "connection",
                 "tags": {"session_handler": str(session.__class__.__name__), "server_port": session.own_port6,
                            "client_port": session.remote_port6,
                            "client_ip": session.remote_ip6,
+                           "connected": session.connected,
                            "disconnect_reason": str(session.termination_reason)},
                 "time": session.session_start,
                 "fields": {"server_port": session.own_port6,
                            "client_port": session.remote_port6,
                            "client_ip": session.remote_ip6,
+                           "connected": session.connected,
                            "disconnect_reason": str(session.termination_reason)}
             }
 
@@ -258,7 +262,3 @@ class Database:
                                         str(session.termination_reason),
                                         str(session.downloads)))
         self.con.commit()
-
-        if self.config_module.influx_enabled:
-            influx_client = Influx(self.config_module)
-            influx_client.add_session(session)

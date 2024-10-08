@@ -1,6 +1,6 @@
 import socket
 from datetime import datetime
-from logger import log, Database, get_timestamp, TIMEFORMAT
+from logger import log, Database, get_timestamp, TIMEFORMAT, Influx
 from services.Session import SessionBase
 
 
@@ -71,6 +71,11 @@ class Service:
         # TODO: Make client_socket non-blocking
         if client_socket is not None:
             session = self.session(client_socket, self)
+
+            if self.config_module.influx_enabled:
+                influx_client = Influx(self.config_module)
+                influx_client.add_session(session)
+
             if session.connected:
                 self.s_to_session[client_socket] = session
             return client_socket
