@@ -59,7 +59,7 @@ for service_config in config_module.service_configs:
         service_config['ip'],
         service_config['port'],
         db,
-        config_module.config,
+        config_module,
         service_config['session']
     )
     services.append(service_instance)

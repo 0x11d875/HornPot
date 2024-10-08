@@ -8,7 +8,7 @@ from services.Session import SessionBase
 
 class Service:
 
-    def __init__(self, name: str, ip: str, port: int, db: Database, config: dict, session=SessionBase):
+    def __init__(self, name: str, ip: str, port: int, db: Database, config, session=SessionBase,):
         self.name: str = name
         self.ip: str = ip
         self.port: int = port
@@ -29,8 +29,8 @@ class Service:
         self.session = session
 
     def check_quota(self):
-        if self.config.get('quota', False):
-            quota = self.config.get('quota')
+        if self.config.config.get('quota', False):
+            quota = self.config.config.get('quota')
 
             now = datetime.strptime(get_timestamp(), TIMEFORMAT)
             killed_sessions = []
@@ -74,8 +74,8 @@ class Service:
         if client_socket is not None:
             session = self.session(client_socket, self)
 
-            if self.config_module.influx_enabled:
-                influx_client = Influx(self.config_module)
+            if self.config.influx_enabled:
+                influx_client = Influx(self.config)
                 influx_client.add_session(session)
 
             if session.connected:
