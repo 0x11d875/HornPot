@@ -256,13 +256,13 @@ class Database:
                     file_info['sha256-sum'] = checksum
 
                     file_path = f"downloads/files/"
-                    os.makedirs(url_download_folder, exist_ok=True)
+                    os.makedirs(file_path, exist_ok=True)
                     shutil.move(tmp_file_path, f'{file_path}/{checksum}')
 
 
                     # also check the content of the file
                     # maybe this is a shell script that contains another download link
-                    with open(file_path, 'rb') as f:
+                    with open(f'{file_path}/{checksum}', 'rb') as f:
                         content = f.read()
                         self.handle_message(session, content, url_download_folder, rec_count-1)
 
