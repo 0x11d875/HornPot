@@ -215,7 +215,7 @@ class Database:
         for index, url in enumerate(urls, start=0):
             log(f"{index}/{len(urls)} Downloading {url}...")
             file_info = {'sha256-sum': None, 'url': url}
-            session_download_folder = f"downloads/{current_time}/{index}"
+            session_download_folder = f"downloads/{current_time}/"
             url_download_folder = f"{session_download_folder}/{index}"
             os.makedirs(url_download_folder, exist_ok=True)
 
