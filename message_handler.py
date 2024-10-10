@@ -2,6 +2,7 @@ import re
 import urllib.parse
 
 ignore_ip = ""
+ignored_urls = ["example.com"]
 
 def find_urls(text):
 
@@ -15,6 +16,20 @@ def find_urls(text):
     url_regex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
     url_pattern = re.compile(url_regex, re.IGNORECASE)
     urls = [match[0] for match in url_pattern.findall(text)]
+
+    to_remove = set()
+    urls = set(urls)
+
+    for string in ignored_urls:
+        if any(substring in string for substring in urls):
+            to_remove.add(string)
+
+    for url in urls:
+        if ignore_ip in urls:
+            to_remove.add(url)
+
+    urls.difference_update(to_remove)
+
 
     return set(urls)
 

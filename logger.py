@@ -203,7 +203,10 @@ class Database:
         return sha256_hash.hexdigest()
 
 
-    def handle_message(self, session, message):
+    def handle_message(self, session, message, root_folder=None, rec_count=3):
+
+        if rec_count <= 0:
+            return
 
         max_file_size = 100 * 1024
         timeout = 10
@@ -215,8 +218,13 @@ class Database:
         for index, url in enumerate(urls, start=0):
             log(f"{index}/{len(urls)} Downloading {url}...")
             file_info = {'sha256-sum': None, 'url': url}
-            session_download_folder = f"downloads/{current_time}/"
+
+            if root_folder is None:
+                session_download_folder = f"downloads/{current_time}/"
+            else:
+                session_download_folder = f"{root_folder}/"
             url_download_folder = f"{session_download_folder}/{index}"
+
             os.makedirs(url_download_folder, exist_ok=True)
 
             total_downloaded = 0
@@ -246,6 +254,13 @@ class Database:
                     checksum = self.sha256_sum(file_path)
                     file_info['sha256-sum'] = checksum
 
+                    # also check the content of the file
+                    # maybe this is a shell script that contains another download link
+                    with open(file_path, 'rb') as f:
+                        content = f.read()
+                        self.handle_message(session, content, url_download_folder, rec_count-1)
+
+
             except Exception as e:
                 log(f"Exception: {str(e)}")
                 file_info['exception'] = str(e)
@@ -259,7 +274,6 @@ class Database:
                 import json
                 jsn = str(json.dumps(file_info, sort_keys=True, indent=4))
                 f.write(jsn.encode('utf-8'))
-
 
 
 

@@ -125,7 +125,10 @@ class Service:
                 if not client_connected:
                     self._terminate_session(s)
                     return False, None, False
-                self.db.handle_message(session, session.last_received_message)
+                try:
+                    self.db.handle_message(session, session.last_received_message)
+                except Exception as e:
+                    log(f"Unable to download link: {e}")
 
         if session is not None and session.wants_write():
             client_wants_write = True
