@@ -204,12 +204,13 @@ class Database:
         return sha256_hash.hexdigest()
 
 
-    def handle_message(self, session, message, root_folder=None, rec_count=3):
+    def handle_message(self, session, message, root_folder=None, rec_count=3, total_size=0):
+        max_file_size = 5000 * 1024
 
-        if rec_count <= 0:
+        if rec_count <= 0 or total_size >= max_file_size *10:
             return
 
-        max_file_size = 5000 * 1024
+
         timeout = 10
 
         current_time = get_timestamp()
@@ -264,7 +265,7 @@ class Database:
                     # maybe this is a shell script that contains another download link
                     with open(f'{file_path}/{checksum}', 'rb') as f:
                         content = f.read()
-                        self.handle_message(session, content, url_download_folder, rec_count-1)
+                        self.handle_message(session, content, url_download_folder, rec_count-1, max_file_size+total_downloaded)
 
 
             except Exception as e:
