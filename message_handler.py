@@ -21,10 +21,9 @@ def find_urls(text):
     urls = set(urls)
 
     for string in ignored_urls:
-        if any(substring in string for substring in urls):
-            for url in urls:
-                if string in url:
-                    to_remove.add(url)
+        for url in urls:
+            if string in url:
+                to_remove.add(url)
 
     for url in urls:
         if ignore_ip in urls:
