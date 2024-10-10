@@ -208,7 +208,7 @@ class Database:
         if rec_count <= 0:
             return
 
-        max_file_size = 100 * 1024
+        max_file_size = 5000 * 1024
         timeout = 10
 
         current_time = get_timestamp()
@@ -246,7 +246,7 @@ class Database:
                                 file.close()
                                 os.remove(file_path)
                                 success = False
-                                break
+                                raise MemoryError("File size bigger then threshold.")
                             file.write(chunk)
 
                 if success:
