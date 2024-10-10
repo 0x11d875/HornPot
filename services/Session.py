@@ -28,6 +28,16 @@ class SessionBase:
         self.num_send = 0
         self.termination_reason = ""
 
+        self.own_ip6 = ""
+        self.own_port6 = ""
+        self.own_ip4 = ""
+        self.own_port4 = ""
+
+        self.remote_ip6 = 0
+        self.remote_port6 = 0
+        self.remote_ip4 = 0
+        self.remote_port4 = 0
+
         try:
             self.own_ip6, self.own_port6, self.own_ip4, self.own_port4 = self.s.getsockname()
             self.remote_ip6, self.remote_port6, self.remote_ip4, self.remote_port4 = self.s.getpeername()
