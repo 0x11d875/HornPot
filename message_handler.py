@@ -2,7 +2,7 @@ import re
 import urllib.parse
 
 ignore_ip = ""
-ignored_urls = ["example.com", "etherx.jabber.org", "clientapi.ipip.net"]
+ignored_urls = ["example.com", "etherx.jabber.org", "clientapi.ipip.net", "xmlsoap.org"]
 
 def find_urls(text):
 
