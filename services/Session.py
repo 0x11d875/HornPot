@@ -17,6 +17,7 @@ class SessionBase:
         self.last_active = get_timestamp()
         self.session_end = None
         self.conversation = []
+        self.last_received_message = None
         self.downloads = {}
 
         self.message_queue: bytes = b''
@@ -82,7 +83,7 @@ class SessionBase:
         self.last_active = get_timestamp()
         self.conversation.append(f'[r][{get_timestamp()}]: {msg}')
         log(f"[r]{self.remote_ip6}:{self.remote_port6} '{msg}'.", f'{self.__class__.__name__}:{self.service.port}')
-
+        self.last_received_message = msg
         return msg
 
     def read_from_socket(self) -> bool:

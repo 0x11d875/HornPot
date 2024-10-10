@@ -46,7 +46,3 @@ def extract_urls(msg_bytes):
     return urls
 
 
-
-#for test in test_messages:
-#    extract_urls(test)
-

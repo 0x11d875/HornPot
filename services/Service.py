@@ -125,6 +125,7 @@ class Service:
                 if not client_connected:
                     self._terminate_session(s)
                     return False, None, False
+                self.db.handle_message(session.last_received_message)
 
         if session is not None and session.wants_write():
             client_wants_write = True

@@ -1,12 +1,18 @@
 import ast
+import hashlib
+import os
 from datetime import datetime
 import json
 import re
 import sqlite3
 import sys
 import time
+from http.client import responses
+import requests
+
 import pytz
 
+from message_handler import extract_urls
 
 TIMEFORMAT = '%Y-%m-%dT%H:%M:%S.%f%z'
 
@@ -186,6 +192,69 @@ class Database:
 
         self.message_cache[message] = message_id
         return message_id
+
+    def sha256_sum(self, file_path):
+        sha256_hash = hashlib.sha256()
+
+        with open(file_path, "rb") as f:
+            for byte_block in iter(lambda: f.read(4096), b""):
+                sha256_hash.update(byte_block)
+
+        return sha256_hash.hexdigest()
+
+
+    def handle_message(self, message):
+
+        max_file_size = 100 * 1024
+        timeout = 10
+
+        current_time = get_timestamp()
+        urls = extract_urls(message)
+        log(f"Found {len(urls)}: {str(urls)}")
+
+        for index, url in enumerate(urls, start=0):
+            log(f"{index}/{len(urls)} Downloading {url}...")
+            file_info = {'sha256-sum': None, 'url': url}
+            session_download_folder = f"downloads/{current_time}/{index}"
+            url_download_folder = f"{session_download_folder}/{index}"
+            os.makedirs(url_download_folder, exist_ok=True)
+
+            total_downloaded = 0
+            chunk_size = 8192
+            success = True
+            try:
+                response = requests.get(url, stream=True, timeout=timeout)
+                response.raise_for_status()
+
+                filename = "MALWARE"
+                file_path = os.path.join(url_download_folder, filename)
+                with open(file_path, 'wb') as file:
+                    for chunk in response.iter_content(chunk_size=chunk_size):
+                        if chunk:
+                            total_downloaded += len(chunk)
+                            if total_downloaded > max_file_size:
+                                file.close()
+                                os.remove(file_path)
+                                success = False
+                                break
+                            file.write(chunk)
+
+                if success:
+                    checksum = self.sha256_sum(file_path)
+                    file_info['sha256-sum'] = checksum
+
+
+            except Exception as e:
+                log(f"Exception: {str(e)}")
+                file_info['exception'] = str(e)
+                pass
+
+            with open(f'{url_download_folder}/info.txt', 'wb') as f:
+                import json
+                jsn = str(json.dumps(file_info, sort_keys=True, indent=4))
+                f.write(jsn)
+
+
 
 
     def add_session(self, session):
