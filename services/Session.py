@@ -18,7 +18,7 @@ class SessionBase:
         self.session_end = None
         self.conversation = []
         self.last_received_message = None
-        self.downloads = {}
+        self.downloads = []
 
         self.message_queue: bytes = b''
 

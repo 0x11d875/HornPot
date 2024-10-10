@@ -203,7 +203,7 @@ class Database:
         return sha256_hash.hexdigest()
 
 
-    def handle_message(self, message):
+    def handle_message(self, session, message):
 
         max_file_size = 100 * 1024
         timeout = 10
@@ -222,9 +222,11 @@ class Database:
             total_downloaded = 0
             chunk_size = 8192
             success = True
+            response = None
             try:
                 response = requests.get(url, stream=True, timeout=timeout)
                 response.raise_for_status()
+
 
                 filename = "MALWARE"
                 file_path = os.path.join(url_download_folder, filename)
@@ -240,19 +242,23 @@ class Database:
                             file.write(chunk)
 
                 if success:
+                    session.downloads.append(str(current_time))
                     checksum = self.sha256_sum(file_path)
                     file_info['sha256-sum'] = checksum
-
 
             except Exception as e:
                 log(f"Exception: {str(e)}")
                 file_info['exception'] = str(e)
+
+            try:
+                file_info['http_status_code'] = response.status_code
+            except Exception as e:
                 pass
 
             with open(f'{url_download_folder}/info.txt', 'wb') as f:
                 import json
                 jsn = str(json.dumps(file_info, sort_keys=True, indent=4))
-                f.write(jsn)
+                f.write(jsn.encode('utf-8'))
 
 
 
