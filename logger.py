@@ -1,6 +1,7 @@
 import ast
 import hashlib
 import os
+import shutil
 from datetime import datetime
 import json
 import re
@@ -215,6 +216,9 @@ class Database:
         urls = extract_urls(message)
         log(f"Found {len(urls)}: {str(urls)}")
 
+        tmp_file_path = f"/tmp/MALWARE_TMP"
+
+
         for index, url in enumerate(urls, start=0):
             log(f"{index}/{len(urls)} Downloading {url}...")
             file_info = {'sha256-sum': None, 'url': url}
@@ -235,24 +239,26 @@ class Database:
                 response = requests.get(url, stream=True, timeout=timeout)
                 response.raise_for_status()
 
-
-                filename = "MALWARE"
-                file_path = os.path.join(url_download_folder, filename)
-                with open(file_path, 'wb') as file:
+                with open(tmp_file_path, 'wb') as file:
                     for chunk in response.iter_content(chunk_size=chunk_size):
                         if chunk:
                             total_downloaded += len(chunk)
                             if total_downloaded > max_file_size:
                                 file.close()
-                                os.remove(file_path)
+                                os.remove(tmp_file_path)
                                 success = False
                                 raise MemoryError("File size bigger then threshold.")
                             file.write(chunk)
 
                 if success:
                     session.downloads.append(str(current_time))
-                    checksum = self.sha256_sum(file_path)
+                    checksum = self.sha256_sum(tmp_file_path)
                     file_info['sha256-sum'] = checksum
+
+                    file_path = f"downloads/files/"
+                    os.makedirs(url_download_folder, exist_ok=True)
+                    shutil.move(tmp_file_path, f'{file_path}/{checksum}')
+
 
                     # also check the content of the file
                     # maybe this is a shell script that contains another download link
