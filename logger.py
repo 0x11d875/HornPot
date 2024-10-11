@@ -233,7 +233,7 @@ class Database:
             os.makedirs(url_download_folder, exist_ok=True)
 
             total_downloaded = 0
-            chunk_size = 8192
+            chunk_size = 100 * 1024
             success = True
             response = None
             try:
