@@ -22,6 +22,9 @@ def get_timestamp():
     berlin_tz = pytz.timezone('Europe/Berlin')
     current_time = datetime.fromtimestamp(time.time(), berlin_tz)
 
+    # Set microseconds to 0
+    current_time = current_time.replace(microsecond=0)
+
     return current_time.strftime(TIMEFORMAT)
 
 def log(msg, module=None):
