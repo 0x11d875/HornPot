@@ -210,6 +210,10 @@ class Database:
     def handle_message(self, session, message, root_folder=None, rec_count=3, total_size=0):
         max_file_size = 5000 * 1024
 
+        recursion_content = None
+        url_download_folder = ""
+        total_downloaded = 0
+
         if rec_count <= 0 or total_size >= max_file_size *10:
             return
 
@@ -235,7 +239,7 @@ class Database:
 
             os.makedirs(url_download_folder, exist_ok=True)
 
-            total_downloaded = 0
+
             chunk_size = 100 * 1024
             success = True
             response = None
@@ -263,12 +267,10 @@ class Database:
                     os.makedirs(file_path, exist_ok=True)
                     shutil.move(tmp_file_path, f'{file_path}/{checksum}')
 
-
                     # also check the content of the file
                     # maybe this is a shell script that contains another download link
                     with open(f'{file_path}/{checksum}', 'rb') as f:
-                        content = f.read()
-                        self.handle_message(session, content, url_download_folder, rec_count-1, max_file_size+total_downloaded)
+                        recursion_content = f.read()
 
 
             except Exception as e:
@@ -284,6 +286,12 @@ class Database:
                 import json
                 jsn = str(json.dumps(file_info, sort_keys=True, indent=4))
                 f.write(jsn.encode('utf-8'))
+
+
+
+        if recursion_content is not None:
+            self.handle_message(session, recursion_content, url_download_folder, rec_count - 1,
+                                max_file_size + total_downloaded)
 
 
 
