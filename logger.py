@@ -305,7 +305,8 @@ class Database:
                 # Extract the groups
                 direction = match.group(1).replace("[", "").replace("]", "")
                 timestamp = match.group(2).replace("[", "").replace("]", "")
-                message_content = match.group(3)
+                timezone = match.group(3).replace("[", "").replace("]", "")
+                message_content = match.group(4)
 
                 message_id = self.get_or_insert_message(message_content)
 
