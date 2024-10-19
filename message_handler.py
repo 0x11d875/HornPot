@@ -6,8 +6,6 @@ ignored_urls = ["example.com", "etherx.jabber.org", "clientapi.ipip.net", "xmlso
 
 def find_urls(text):
 
-    if ignore_ip in text:
-        return set()
 
     text = text.replace("\\", "")
     text = text.replace(";", " ")
