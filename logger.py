@@ -259,7 +259,7 @@ class Database:
                             file.write(chunk)
 
                 if success:
-                    session.downloads.append(str(current_time))
+                    session.downloads.add(str(current_time))
                     checksum = self.sha256_sum(tmp_file_path)
                     file_info['sha256-sum'] = checksum
 
@@ -298,7 +298,7 @@ class Database:
     def add_session(self, session):
 
         conversation_prepared = []
-        pattern = r"(\[[rt]\])(\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}\]): (b'.*')"
+        pattern = r"(\[[rt]\])(\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}([+-]\d{4})?\]): (b'.*')"
         for message in session.conversation:
             match = re.match(pattern, message)
             if match:
@@ -316,7 +316,7 @@ class Database:
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         self.cur.execute(insert_query, (str(session.session_start,),
-                                        str( session.remote_ip6),
+                                        str(session.remote_ip6),
                                         str(session.remote_port6),
                                         str(session.own_port6),
                                         str(str(session.__class__.__name__)),
