@@ -5,10 +5,8 @@ from enum import Enum
 
 import pytz
 
-from smb1_constants import *
-from smb2_constants import *
-from utils import *
-from SMB2 import  smb2srv_reply_smb_negprot
+from services.smb.smb1_constants import *
+from services.smb.utils import *
 
 all_smb_requsts = [
     b'\x00\x00\x00T\xffSMBr\x00\x00\x00\x00\x18\x01(\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00/K\x00\x00\xc5^\x001\x00\x02LANMAN1.0\x00\x02LM1.2X002\x00\x02NT LANMAN 1.0\x00\x02NT LM 0.12\x00',

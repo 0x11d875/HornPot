@@ -1,7 +1,7 @@
 
-from smb1_constants import *
-from smb2_constants import *
-from utils import *
+from services.smb.smb1_constants import *
+from services.smb.smb2_constants import *
+from services.smb.utils import *
 
 # https://github.com/samba-team/samba/blob/7cae7aad1ca6dcd5e0a3a102f36af74fa49a2c2b/source4/smb_server/smb2/negprot.c#L278
 # reply to a SMB negprot request with dialect "SMB 2.002"
