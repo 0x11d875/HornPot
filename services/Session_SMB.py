@@ -1,10 +1,12 @@
+import socket
 from services.Session import SessionBase
 from services.smb.SMB1 import SMB1_parser
 
 
 class SessionSMB(SessionBase):
 
-    def __init__(self):
+    def __init__(self, s: socket, service):
+        super().__init__(s, service)
         self.smb1_parser = SMB1_parser()
 
 
