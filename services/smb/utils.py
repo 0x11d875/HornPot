@@ -25,26 +25,32 @@ def memset(buffer, value, length):
 def SSVAL(buf, pos, val):
     """Put a 2 byte SMB value into a buffer."""
     struct.pack_into('<H', buf, pos, val)
+    return 2
 
 def SIVAL(buf, pos, val):
     """Put a 4 byte SMB value into a buffer."""
     struct.pack_into('<I', buf, pos, val)
+    return 4
 
 def SBVAL(buf, pos, val):
     """Put an 8 byte SMB value into a buffer."""
     struct.pack_into('<Q', buf, pos, val)
+    return 8
 
 def SSVALS(buf, pos, val):
     """Signed version of SSVAL() - put a signed 2 byte SMB value into a buffer."""
     struct.pack_into('<h', buf, pos, val)
+    return 2
 
 def SIVALS(buf, pos, val):
     """Signed version of SIVAL() - put a signed 4 byte SMB value into a buffer."""
     struct.pack_into('<i', buf, pos, val)
+    return 4
 
 def SBVALS(buf, pos, val):
     """Signed version of SBVAL() - put a signed 8 byte SMB value into a buffer."""
     struct.pack_into('<q', buf, pos, val)
+    return 8
 
 
 

@@ -1,5 +1,9 @@
+import time
 from argparse import ArgumentError
+from datetime import datetime, timedelta
 from enum import Enum
+
+import pytz
 
 from smb1_constants import *
 from smb2_constants import *
@@ -3172,6 +3176,109 @@ all_smb_requsts = [
 
 
 
+
+
+
+# https://github.com/samba-team/samba/blob/7cae7aad1ca6dcd5e0a3a102f36af74fa49a2c2b/source4/smb_server/smb/negprot.c#L278
+def reply_nt1(req: smb_request_buffer):
+    rq_out = smb_request_buffer(req.buffer)
+
+
+def push_dos_date(buf, offset, unixdate):
+    # Convert UNIX timestamp to a datetime object
+    dt = datetime.fromtimestamp(unixdate)
+
+    berlin_tz = pytz.timezone('Europe/Berlin')
+    localized_dt = berlin_tz.localize(dt)
+
+    # Get DOS date and time format
+    dos_date = (localized_dt.year - 1980) << 9 | localized_dt.month << 5 | localized_dt.day
+    dos_time = localized_dt.hour << 11 | localized_dt.minute << 5 | (localized_dt.second // 2)
+
+    # Store DOS date and time into buffer at specified offset
+    buf[offset:offset + 2] = dos_date.to_bytes(2, byteorder='little')
+    buf[offset + 2:offset + 4] = dos_time.to_bytes(2, byteorder='little')
+
+
+def srv_push_dos_date(buf, offset):
+    # Use current time as UNIX timestamp
+    unixdate = int(datetime.now().timestamp())
+
+    # Call push_dos_date with buffer and current UNIX timestamp
+    push_dos_date(buf, offset, unixdate)
+
+    return 4
+
+
+#https://github.com/samba-team/samba/blob/7cae7aad1ca6dcd5e0a3a102f36af74fa49a2c2b/source4/smb_server/smb/negprot.c#L125
+def reply_lanman1(req: smb_request_buffer, choice = 0):
+    resp = bytearray(26)
+
+    secword = 0
+
+    max_recv = 0
+    lp_ctx = 0
+    raw = 0
+    pid = 0x1314
+    zone_offset = 0
+
+    size = 0
+    size += SSVAL(resp, VWV(0), choice)
+    size += SSVAL(resp, VWV(1), secword)
+    size += SSVAL(resp, VWV(2), max_recv)
+    size += SSVAL(resp, VWV(3), lp_ctx)
+    size += SSVAL(resp, VWV(4), 1)
+    size += SSVAL(resp, VWV(5), raw)
+    size += SIVAL(resp, VWV(6), pid)
+    size += srv_push_dos_date(resp, VWV(8))
+    size += SSVAL(resp, VWV(10), int(zone_offset / 60))
+    size += SIVAL(resp, VWV(11), 0) # reserved
+
+    # https://github.com/samba-team/samba/blob/7cae7aad1ca6dcd5e0a3a102f36af74fa49a2c2b/source4/smb_server/smb/negprot.c#L168C3-L168C35
+    encrypted_passwords = False
+    if encrypted_passwords:
+        SSVAL(resp, VWV(11), 8)
+
+
+    return resp
+
+
+# https://github.com/samba-team/samba/blob/7cae7aad1ca6dcd5e0a3a102f36af74fa49a2c2b/source4/smb_server/smb/negprot.c#L189
+def reply_lanman2(req: smb_request_buffer):
+    resp = bytearray(26)
+
+    secword = 0
+    choice = 0
+
+    max_recv = 0
+    lp_ctx = 0
+    raw = 0
+    pid = 0x1314
+    zone_offset = 0
+
+    size = 0
+    size += SSVAL(resp, VWV(0), choice)
+    size += SSVAL(resp, VWV(1), secword)
+    size += SSVAL(resp, VWV(2), max_recv)
+    size += SSVAL(resp, VWV(3), lp_ctx)
+    size += SSVAL(resp, VWV(4), 1)
+    size += SSVAL(resp, VWV(5), raw)
+    size += SIVAL(resp, VWV(6), pid)
+    size += srv_push_dos_date(resp, VWV(8))
+    size += SSVAL(resp, VWV(10), int(zone_offset / 60))
+    size += SIVAL(resp, VWV(11), 0) # reserved
+
+    # https://github.com/samba-team/samba/blob/7cae7aad1ca6dcd5e0a3a102f36af74fa49a2c2b/source4/smb_server/smb/negprot.c#L168C3-L168C35
+    encrypted_passwords = False
+    if encrypted_passwords:
+        SSVAL(resp, VWV(11), 8)
+
+
+    return resp
+
+
+
+
 #https://github.com/samba-team/samba/blob/7cae7aad1ca6dcd5e0a3a102f36af74fa49a2c2b/libcli/smb/smb_constants.h#L81
 class protocol_types(Enum):
     PROTOCOL_DEFAULT = -1
@@ -3188,10 +3295,8 @@ class protocol_types(Enum):
     PROTOCOL_SMB3_11 = 10
 
 
-# https://github.com/samba-team/samba/blob/7cae7aad1ca6dcd5e0a3a102f36af74fa49a2c2b/source4/smb_server/smb/negprot.c#L278
-def reply_nt1(rq_in: smb_request_buffer, choice: int):
-    pass
-
+# https://github.com/samba-team/samba/blob/7cae7aad1ca6dcd5e0a3a102f36af74fa49a2c2b/source4/smb_server/smb/negprot.c#L513
+def smbsrv_reply_negprot(rq_in: smb_request_buffer):
 
     # https://github.com/samba-team/samba/blob/7cae7aad1ca6dcd5e0a3a102f36af74fa49a2c2b/source4/smb_server/smb/negprot.c#L488
     supported_protocols = [
@@ -3233,13 +3338,13 @@ def reply_nt1(rq_in: smb_request_buffer, choice: int):
     # normally we would then here compare which we can, but we will accept ALL
 
     for prot in protos:
-        pass
+        if prot == "LANMAN1.0" or prot == "Windows for Workgroups 3.1a" or prot == "MICROSOFT NETWORKS 3.0":
+            return reply_lanman1(rq_in)
+        elif prot == "LANMAN2.0" or prot == "LANMAN2.1" or prot == "LM1.2X002" or prot == "Samba" or prot == "DOS LM1.2X002":
+            return reply_lanman2(rq_in)
 
 
-
-
-
-    return protos
+    return None
 
 
 
@@ -3253,7 +3358,7 @@ class SMB1_parser:
     #########################
     ##################################################
 
-    def parse_smb_request(self, buf):
+    def create_smb_response(self, buf):
 
         # https://github.com/samba-team/samba/blob/7a662e097be5e0d3f7779fa544486968b8f57063/source4/smb_server/smb/receive.c#L353
         parsed_fields = {}
@@ -3300,27 +3405,33 @@ class SMB1_parser:
 
         ### switch message
         if command_name == "SMBnegprot":
-            smb2srv_reply_smb_negprot(rq_in)
+            return smbsrv_reply_negprot(rq_in)
+
 
         if command_name != 'SMBnegprot':
             print(command_name)
 
 
-        return parsed_fields
+        return None
 
 
 
 
 
-smb1_parser = SMB1_parser()
-valid = 0
-for rq in all_smb_requsts:
-    parsed = smb1_parser.parse_smb_request(rq)
-    try:
-        parsed = smb1_parser.parse_smb_request(rq)
-        print(parsed)
-        valid += 1
-    except:
-        pass
+def test_smb():
 
-print(f"{valid}/{len(all_smb_requsts)} valid")
+    smb1_parser = SMB1_parser()
+    valid = 0
+    for rq in all_smb_requsts:
+        #parsed = smb1_parser.create_smb_response(rq)
+        try:
+            parsed = smb1_parser.create_smb_response(rq)
+            print(parsed)
+            valid += 1
+        except:
+            pass
+
+    print(f"{valid}/{len(all_smb_requsts)} valid")
+
+
+test_smb()
