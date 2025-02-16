@@ -1,0 +1,273 @@
+# https://github.com/samba-team/samba/blob/7cae7aad1ca6dcd5e0a3a102f36af74fa49a2c2b/libcli/smb/smb2_constants.h#L1
+
+
+
+#  offsets into SMB2_TRANSFORM header elements# /
+SMB2_TF_PROTOCOL_ID	 = 0x00 #   4 bytes# /
+SMB2_TF_SIGNATURE	 = 0x04 #  16 bytes# /
+SMB2_TF_NONCE		 = 0x14 #  16 bytes# /
+SMB2_TF_MSG_SIZE	 = 0x24 #   4 bytes# /
+SMB2_TF_RESERVED	 = 0x28 #   2 bytes# /
+SMB2_TF_FLAGS		 = 0x2A #   2 bytes# /
+SMB2_TF_SESSION_ID	 = 0x2C #   8 bytes# /
+
+SMB2_TF_HDR_SIZE	 = 0x34 #  52 bytes# /
+
+SMB2_TF_MAGIC  = 0x424D53FD #   = 0xFD 'S' 'M' 'B'# /
+
+SMB2_TF_FLAGS_ENCRYPTED      = 0x0001
+
+#  offsets into header elements for a sync SMB2 request# /
+SMB2_HDR_PROTOCOL_ID     = 0x00
+SMB2_HDR_LENGTH		 = 0x04
+SMB2_HDR_CREDIT_CHARGE	 = 0x06
+SMB2_HDR_EPOCH		= SMB2_HDR_CREDIT_CHARGE
+SMB2_HDR_STATUS		 = 0x08
+SMB2_HDR_OPCODE		 = 0x0c
+SMB2_HDR_CREDIT		 = 0x0e
+SMB2_HDR_FLAGS		 = 0x10
+SMB2_HDR_NEXT_COMMAND	 = 0x14
+SMB2_HDR_MESSAGE_ID      = 0x18
+SMB2_HDR_PID		 = 0x20
+SMB2_HDR_TID		 = 0x24
+SMB2_HDR_SESSION_ID	 = 0x28
+SMB2_HDR_SIGNATURE	 = 0x30 #  16 bytes# /
+SMB2_HDR_BODY		 = 0x40
+
+#  offsets into header elements for an async SMB2 request# /
+SMB2_HDR_ASYNC_ID	 = 0x20
+
+#  header flags# /
+SMB2_HDR_FLAG_REDIRECT   = 0x01
+SMB2_HDR_FLAG_ASYNC      = 0x02
+SMB2_HDR_FLAG_CHAINED    = 0x04
+SMB2_HDR_FLAG_SIGNED     = 0x08
+SMB2_HDR_FLAG_PRIORITY_MASK  = 0x70
+SMB2_HDR_FLAG_DFS        = 0x10000000
+SMB2_HDR_FLAG_REPLAY_OPERATION  = 0x20000000
+
+
+#  SMB2 opcodes# /
+SMB2_OP_NEGPROT		 = 0x00
+SMB2_OP_SESSSETUP	 = 0x01
+SMB2_OP_LOGOFF		 = 0x02
+SMB2_OP_TCON		 = 0x03
+SMB2_OP_TDIS		 = 0x04
+SMB2_OP_CREATE		 = 0x05
+SMB2_OP_CLOSE		 = 0x06
+SMB2_OP_FLUSH		 = 0x07
+SMB2_OP_READ		 = 0x08
+SMB2_OP_WRITE		 = 0x09
+SMB2_OP_LOCK		 = 0x0a
+SMB2_OP_IOCTL		 = 0x0b
+SMB2_OP_CANCEL		 = 0x0c
+SMB2_OP_KEEPALIVE	 = 0x0d
+SMB2_OP_QUERY_DIRECTORY	 = 0x0e
+SMB2_OP_NOTIFY		 = 0x0f
+SMB2_OP_GETINFO		 = 0x10
+SMB2_OP_SETINFO		 = 0x11
+SMB2_OP_BREAK		 = 0x12
+
+SMB2_MAGIC  = 0x424D53FE #   = 0xFE 'S' 'M' 'B'# /
+
+#  SMB2 negotiate dialects# /
+SMB2_DIALECT_REVISION_000        = 0x0000 #  early beta dialect# /
+SMB2_DIALECT_REVISION_202        = 0x0202
+SMB2_DIALECT_REVISION_210        = 0x0210
+SMB2_DIALECT_REVISION_222        = 0x0222
+SMB2_DIALECT_REVISION_224        = 0x0224
+SMB3_DIALECT_REVISION_300        = 0x0300
+SMB3_DIALECT_REVISION_302        = 0x0302
+SMB3_DIALECT_REVISION_310        = 0x0310
+SMB3_DIALECT_REVISION_311        = 0x0311
+SMB2_DIALECT_REVISION_2FF        = 0x02FF
+
+#  SMB2 negotiate security_mode# /
+SMB2_NEGOTIATE_SIGNING_ENABLED    = 0x01
+SMB2_NEGOTIATE_SIGNING_REQUIRED   = 0x02
+
+#  SMB2 global capabilities# /
+SMB2_CAP_DFS			 = 0x00000001
+SMB2_CAP_LEASING		 = 0x00000002 #  only in dialect >=  = 0x210# /
+SMB2_CAP_LARGE_MTU		 = 0x00000004 #  only in dialect >=  = 0x210# /
+SMB2_CAP_MULTI_CHANNEL		 = 0x00000008 #  only in dialect >=  = 0x222# /
+SMB2_CAP_PERSISTENT_HANDLES	 = 0x00000010 #  only in dialect >=  = 0x222# /
+SMB2_CAP_DIRECTORY_LEASING	 = 0x00000020 #  only in dialect >=  = 0x222# /
+SMB2_CAP_ENCRYPTION		 = 0x00000040 #  only in dialect >=  = 0x222# /
+
+
+#  Types of SMB2 Negotiate Contexts - only in dialect >=  = 0x310# /
+SMB2_PREAUTH_INTEGRITY_CAPABILITIES  = 0x0001
+SMB2_ENCRYPTION_CAPABILITIES         = 0x0002
+SMB2_COMPRESSION_CAPABILITIES        = 0x0003
+SMB2_NETNAME_NEGOTIATE_CONTEXT_ID    = 0x0005
+SMB2_TRANSPORT_CAPABILITIES          = 0x0006
+SMB2_RDMA_TRANSFORM_CAPABILITIES     = 0x0007
+SMB2_SIGNING_CAPABILITIES            = 0x0008
+SMB2_POSIX_EXTENSIONS_AVAILABLE      = 0x0100
+
+#  Values for the SMB2_PREAUTH_INTEGRITY_CAPABILITIES Context (>=  = 0x310)# /
+SMB2_PREAUTH_INTEGRITY_SHA512        = 0x0001
+
+#  Values for the SMB2_SIGNING_CAPABILITIES Context (>=  = 0x311)# /
+SMB2_SIGNING_INVALID_ALGO           = 0xffff #  only used internally# /
+SMB2_SIGNING_MD5_SMB1               = 0xfffe #  internally for SMB1# /
+SMB2_SIGNING_HMAC_SHA256            = 0x0000 #  default <=  = 0x210# /
+SMB2_SIGNING_AES128_CMAC            = 0x0001 #  default >=  = 0x224# /
+SMB2_SIGNING_AES128_GMAC            = 0x0002 #  only in dialect >=  = 0x311# /
+
+#  Values for the SMB2_ENCRYPTION_CAPABILITIES Context (>=  = 0x311)# /
+SMB2_ENCRYPTION_INVALID_ALGO        = 0xffff #  only used internally# /
+SMB2_ENCRYPTION_NONE                = 0x0000 #  only used internally# /
+SMB2_ENCRYPTION_AES128_CCM          = 0x0001 #  only in dialect >=  = 0x224# /
+SMB2_ENCRYPTION_AES128_GCM          = 0x0002 #  only in dialect >=  = 0x311# /
+SMB2_ENCRYPTION_AES256_CCM          = 0x0003 #  only in dialect >=  = 0x311# /
+SMB2_ENCRYPTION_AES256_GCM          = 0x0004 #  only in dialect >=  = 0x311# /
+
+#  Values for the SMB2_TRANSPORT_CAPABILITIES Context (>=  = 0x311)# /
+SMB2_ACCEPT_TRANSPORT_LEVEL_SECURITY            = 0x0001
+
+#  Values for the SMB2_RDMA_TRANSFORM_CAPABILITIES Context (>=  = 0x311)# /
+SMB2_RDMA_TRANSFORM_NONE                        = 0x0000
+SMB2_RDMA_TRANSFORM_ENCRYPTION                  = 0x0001
+SMB2_RDMA_TRANSFORM_SIGNING                     = 0x0002
+
+#  SMB2 session (request) flags# /
+SMB2_SESSION_FLAG_BINDING        = 0x01
+#       SMB2_SESSION_FLAG_ENCRYPT_DATA   = 0x04       only in dialect >=  = 0x310# /
+
+#  SMB2 session (response) flags# /
+SMB2_SESSION_FLAG_IS_GUEST        = 0x0001
+SMB2_SESSION_FLAG_IS_NULL         = 0x0002
+SMB2_SESSION_FLAG_ENCRYPT_DATA    = 0x0004 #  in dialect >=  = 0x224# /
+
+#  SMB2 tree connect (request) flags# /
+SMB2_SHAREFLAG_CLUSTER_RECONNECT  = 0x0001 #  only in dialect >=  = 0x310# /
+
+#  SMB2 sharetype flags# /
+SMB2_SHARE_TYPE_DISK		 = 0x1
+SMB2_SHARE_TYPE_PIPE		 = 0x2
+SMB2_SHARE_TYPE_PRINT		 = 0x3
+
+#  SMB2 share flags# /
+SMB2_SHAREFLAG_MANUAL_CACHING                     = 0x0000
+SMB2_SHAREFLAG_AUTO_CACHING                       = 0x0010
+SMB2_SHAREFLAG_VDO_CACHING                        = 0x0020
+SMB2_SHAREFLAG_NO_CACHING                         = 0x0030
+SMB2_SHAREFLAG_DFS                                = 0x0001
+SMB2_SHAREFLAG_DFS_ROOT                           = 0x0002
+SMB2_SHAREFLAG_RESTRICT_EXCLUSIVE_OPENS           = 0x0100
+SMB2_SHAREFLAG_FORCE_SHARED_DELETE                = 0x0200
+SMB2_SHAREFLAG_ALLOW_NAMESPACE_CACHING            = 0x0400
+SMB2_SHAREFLAG_ACCESS_BASED_DIRECTORY_ENUM        = 0x0800
+SMB2_SHAREFLAG_FORCE_LEVELII_OPLOCKS              = 0x1000
+SMB2_SHAREFLAG_ENABLE_HASH_V1                     = 0x2000
+SMB2_SHAREFLAG_ENABLE_HASH_V2                     = 0x4000
+SMB2_SHAREFLAG_ENCRYPT_DATA                       = 0x8000
+SMB2_SHAREFLAG_IDENTITY_REMOTING              = 0x00040000
+SMB2_SHAREFLAG_COMPRESS_DATA                  = 0x00100000
+SMB2_SHAREFLAG_ISOLATED_TRANSPORT             = 0x00200000
+
+#  SMB2 share capabilities# /
+SMB2_SHARE_CAP_DFS			 = 0x8
+SMB2_SHARE_CAP_CONTINUOUS_AVAILABILITY	 = 0x10 #  in dialect >=  = 0x222# /
+SMB2_SHARE_CAP_SCALEOUT			 = 0x20 #  in dialect >=  = 0x222# /
+SMB2_SHARE_CAP_CLUSTER			 = 0x40 #  in dialect >=  = 0x222# /
+SMB2_SHARE_CAP_ASYMMETRIC		 = 0x80 #  in dialect >=  = 0x302# /
+
+#  SMB2 create security flags# /
+SMB2_SECURITY_DYNAMIC_TRACKING                    = 0x01
+SMB2_SECURITY_EFFECTIVE_ONLY                      = 0x02
+
+#  SMB2 lock flags# /
+SMB2_LOCK_FLAG_NONE		 = 0x00000000
+SMB2_LOCK_FLAG_SHARED		 = 0x00000001
+SMB2_LOCK_FLAG_EXCLUSIVE	 = 0x00000002
+SMB2_LOCK_FLAG_UNLOCK		 = 0x00000004
+SMB2_LOCK_FLAG_FAIL_IMMEDIATELY	 = 0x00000010
+SMB2_LOCK_FLAG_ALL_MASK		 = 0x00000017
+
+#  SMB2 requested oplock levels# /
+SMB2_OPLOCK_LEVEL_NONE                            = 0x00
+SMB2_OPLOCK_LEVEL_II                              = 0x01
+SMB2_OPLOCK_LEVEL_EXCLUSIVE                       = 0x08
+SMB2_OPLOCK_LEVEL_BATCH                           = 0x09
+SMB2_OPLOCK_LEVEL_LEASE                           = 0xFF
+
+#  SMB2 lease bits# /
+SMB2_LEASE_NONE                                   = 0x00
+
+#  SMB2 lease flags# /
+SMB2_LEASE_FLAG_BREAK_IN_PROGRESS                 = 0x00000002
+SMB2_LEASE_FLAG_PARENT_LEASE_KEY_SET              = 0x00000004
+
+#  SMB2 lease break flags# /
+SMB2_NOTIFY_BREAK_LEASE_FLAG_ACK_REQUIRED         = 0x01
+
+#  SMB2 impersonation levels# /
+SMB2_IMPERSONATION_ANONYMOUS                      = 0x00
+SMB2_IMPERSONATION_IDENTIFICATION                 = 0x01
+SMB2_IMPERSONATION_IMPERSONATION                  = 0x02
+SMB2_IMPERSONATION_DELEGATE                       = 0x03
+
+#  SMB2 create tags# /
+SMB2_CREATE_TAG_EXTA = "ExtA"
+SMB2_CREATE_TAG_MXAC = "MxAc"
+SMB2_CREATE_TAG_SECD = "SecD"
+SMB2_CREATE_TAG_DHNQ = "DHnQ"
+SMB2_CREATE_TAG_DHNC = "DHnC"
+SMB2_CREATE_TAG_ALSI = "AlSi"
+SMB2_CREATE_TAG_TWRP = "TWrp"
+SMB2_CREATE_TAG_QFID = "QFid"
+SMB2_CREATE_TAG_RQLS = "RqLs"
+SMB2_CREATE_TAG_DH2Q = "DH2Q"
+SMB2_CREATE_TAG_DH2C = "DH2C"
+SMB2_CREATE_TAG_AAPL = "AAPL"
+SMB2_CREATE_TAG_APP_INSTANCE_ID = "\x45\xBC\xA6\x6A\xEF\xA7\xF7\x4A\x90\x08\xFA\x46\x2E\x14\x4D\x74"
+SVHDX_OPEN_DEVICE_CONTEXT = "\x9C\xCB\xCF\x9E\x04\xC1\xE6\x43\x98\x0E\x15\x8D\xA1\xF6\xEC\x83"
+SMB2_CREATE_TAG_POSIX = "\x93\xAD\x25\x50\x9C\xB4\x11\xE7\xB4\x23\x83\xDE\x96\x8B\xCD\x7C"
+
+#  SMB2 notify flags# /
+SMB2_WATCH_TREE  = 0x0001
+
+#  SMB2 Create ignore some more create_options# /
+
+SMB2_FIND_DIRECTORY_INFO          = 0x01
+SMB2_FIND_FULL_DIRECTORY_INFO     = 0x02
+SMB2_FIND_BOTH_DIRECTORY_INFO     = 0x03
+SMB2_FIND_NAME_INFO               = 0x0C
+SMB2_FIND_ID_BOTH_DIRECTORY_INFO  = 0x25
+SMB2_FIND_ID_FULL_DIRECTORY_INFO  = 0x26
+
+#  SMB2 UNIX Extensions.# /
+SMB2_FIND_POSIX_INFORMATION	  = 0x64
+
+#  flags for SMB2 find# /
+SMB2_CONTINUE_FLAG_RESTART     = 0x01
+SMB2_CONTINUE_FLAG_SINGLE      = 0x02
+SMB2_CONTINUE_FLAG_INDEX       = 0x04
+SMB2_CONTINUE_FLAG_REOPEN      = 0x10
+
+#  get/setinfo classes, see [MS-SMB2] 2.2.37 and 2.2.39# /
+SMB2_0_INFO_FILE                 = 0x01
+SMB2_0_INFO_FILESYSTEM           = 0x02
+SMB2_0_INFO_SECURITY             = 0x03
+SMB2_0_INFO_QUOTA                = 0x04
+
+SMB2_CLOSE_FLAGS_FULL_INFORMATION  = 0x01
+
+SMB2_READFLAG_READ_UNBUFFERED	 = 0x01
+
+SMB2_WRITEFLAG_WRITE_THROUGH	 = 0x00000001
+SMB2_WRITEFLAG_WRITE_UNBUFFERED	 = 0x00000002
+
+#  2.2.31 SMB2 IOCTL Request# /
+SMB2_IOCTL_FLAG_IS_FSCTL		 = 0x00000001
+
+# 
+#  Flags for durable handle v2 requests
+# /
+SMB2_DHANDLE_FLAG_PERSISTENT  = 0x00000002
+
+#  The AES CCM nonce N of 15 - L octets. Where L=4# /
+SMB2_AES_128_CCM_NONCE_SIZE = 11
