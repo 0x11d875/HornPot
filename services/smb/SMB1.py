@@ -3293,6 +3293,184 @@ class protocol_types(Enum):
     PROTOCOL_SMB3_11 = 10
 
 
+#https://github.com/samba-team/samba/blob/a814f5d90a3fb85a94c9516dba224037e8fd76f1/source4/libcli/raw/interfaces.h#L316C6-L316C25
+class smb_sesssetup_level(Enum):
+    RAW_SESSSETUP_OLD = 0
+    RAW_SESSSETUP_NT1 = 1
+    RAW_SESSSETUP_SPNEGO = 2
+    RAW_SESSSETUP_SMB2 = 3
+
+
+# https://github.com/samba-team/samba/blob/a814f5d90a3fb85a94c9516dba224037e8fd76f1/source4/libcli/raw/interfaces.h#L324
+class smb_sesssetup:
+    level: smb_sesssetup_level
+    bufsize: int
+    mpx_max: int
+    vc_num: int
+    sesskey: str
+    capabilities: int
+    action: bytes
+    vuid: int
+
+# https://github.com/samba-team/samba/blob/a814f5d90a3fb85a94c9516dba224037e8fd76f1/source4/smb_server/smb/request.c#L113
+#
+def smbsrv_setup_reply(req: smb_request_buffer, wct, buflen):
+
+    size = NBT_HDR_SIZE + MIN_SMB_SIZE + VWV(wct) + buflen
+    resp = smb_request_buffer(bytearray(size))
+
+    resp.hdr = resp.buffer[NBT_HDR_SIZE:]
+    resp.vwv = resp.hdr[HDR_VWV:]
+    resp.wct = wct
+    resp.data = resp.vwv[VWV(wct) + 2:]
+    resp.data_size = buflen
+    resp.ptr = resp.data
+
+    SIVAL(resp.hdr, HDR_RCLS, 0)
+
+    SCVAL(resp.hdr, HDR_WCT, wct)
+    SSVAL(resp.vwv, VWV(wct), buflen)
+
+    flags2 = (FLAGS2_LONG_PATH_COMPONENTS |
+              FLAGS2_EXTENDED_ATTRIBUTES |
+              FLAGS2_IS_LONG_NAME)
+
+    ## _SMB_FLAGS2_ECHOED_FLAGS is unknown
+    #flags2 |= (req.flags2 & _SMB_FLAGS2_ECHOED_FLAGS)
+
+    #if req.smb_conn.negotiate.client_caps & CAP_STATUS32:
+        #flags2 |= FLAGS2_32_BIT_ERROR_CODES
+
+    #memcpy(resp.hdr, "\377SMB", 4)
+    resp.hdr[:4] = b'\xFFSMB'
+    SCVAL(resp.hdr, HDR_FLG, FLAG_REPLY | FLAG_CASELESS_PATHNAMES)
+    SSVAL(resp.hdr, HDR_FLG2, flags2)
+    SSVAL(resp.hdr, HDR_PIDHIGH, 0)
+    memset(resp.hdr[HDR_SS_FIELD:], 0, 10)
+
+    ##TODO : https://github.com/samba-team/samba/blob/a814f5d90a3fb85a94c9516dba224037e8fd76f1/source4/smb_server/smb/request.c#L164
+
+    return resp
+
+
+
+
+
+# https://github.com/samba-team/samba/blob/a814f5d90a3fb85a94c9516dba224037e8fd76f1/source4/smb_server/smb/reply.c#L1824
+def smbsrv_reply_sesssetup_send(req: smb_request_buffer, io: smb_sesssetup):
+
+
+    level = io.level
+
+    if level == smb_sesssetup_level.RAW_SESSSETUP_OLD:
+
+        resp = smbsrv_setup_reply(req, 3, 0)
+
+        leng = 0
+        leng += SSVAL(resp.vwv, VWV(0), SMB_CHAIN_NONE)
+        leng += SSVAL(resp.vwv, VWV(1), 0)
+        leng += SSVAL(resp.vwv, VWV(2), io.action)
+
+        SSVAL(resp.hdr, HDR_UID, io.vuid)
+
+        return resp
+    elif level == smb_sesssetup_level.RAW_SESSSETUP_NT1:
+        raise NotImplementedError
+    elif level == smb_sesssetup_level.RAW_SESSSETUP_SPNEGO:
+        raise NotImplementedError
+    elif level == smb_sesssetup_level.RAW_SESSSETUP_SMB2:
+        raise NotImplementedError
+
+
+
+# https://github.com/samba-team/samba/blob/a814f5d90a3fb85a94c9516dba224037e8fd76f1/source4/smb_server/smb/sesssetup.c#L85
+def smbsrv_sesssetup_backend_send(req: smb_request_buffer, sess: smb_sesssetup):
+    return smbsrv_reply_sesssetup_send(req, sess)
+
+# https://github.com/samba-team/samba/blob/a814f5d90a3fb85a94c9516dba224037e8fd76f1/source4/smb_server/smb/sesssetup.c#L153
+def sesssetup_old(req: smb_request_buffer, sess: smb_sesssetup):
+    return smbsrv_sesssetup_backend_send(req, sess)
+
+
+# https://github.com/samba-team/samba/blob/a814f5d90a3fb85a94c9516dba224037e8fd76f1/source4/smb_server/smb/sesssetup.c#L625
+def smbsrv_sesssetup_backend(req: smb_request_buffer, sess: smb_sesssetup):
+
+    level = sess.level
+
+    if level == smb_sesssetup_level.RAW_SESSSETUP_OLD:
+        return sesssetup_old(req, sess)
+    elif level == smb_sesssetup_level.RAW_SESSSETUP_NT1:
+        raise NotImplementedError
+        sesssetup_nt1(req, sess);
+    elif level == smb_sesssetup_level.RAW_SESSSETUP_SPNEGO:
+        raise NotImplementedError
+        sesssetup_spnego(req, sess);
+    elif level == smb_sesssetup_level.RAW_SESSSETUP_SMB2:
+        pass
+
+    raise NotImplementedError
+    return smbsrv_sesssetup_backend_send(req, sess, NT_STATUS_INVALID_LEVEL);
+
+
+# https://github.com/samba-team/samba/blob/a814f5d90a3fb85a94c9516dba224037e8fd76f1/source4/smb_server/smb/reply.c#L1950
+# reply to an NT1 style session setup command
+def reply_sesssetup_nt1 (req: smb_request_buffer):
+    io = smb_sesssetup()
+    io.level = smb_sesssetup_level.RAW_SESSSETUP_OLD
+
+    # parse request
+    io.bufsize = SVAL(req.vwv, VWV(2))
+    io.mpx_max = SVAL(req.vwv, VWV(3))
+    io.vc_num = SVAL(req.vwv, VWV(4))
+    io.sesskey = IVAL(req.vwv, VWV(5))
+    passlen1 = SVAL(req.vwv, VWV(7))
+    passlen2 = SVAL(req.vwv, VWV(8))
+    io.capabilities = IVAL(req.vwv, VWV(11))
+
+
+
+    p = req.vwv[VWV(11)+4:]
+    ## we skipp here some checks
+    p = p[passlen1:]
+    p = p[passlen2:]
+
+
+
+    user, len = req_pull_string(None, p)
+    p = p[len:]
+
+    domain, len = req_pull_string(None, p)
+    p = p[len:]
+
+    os, len = req_pull_string(None, p)
+    p = p[len:]
+
+    lanman, len = req_pull_string(None, p)
+    p = p[len:]
+
+
+    return  smbsrv_sesssetup_backend(req, io)
+
+
+
+
+# https://github.com/samba-team/samba/blob/a814f5d90a3fb85a94c9516dba224037e8fd76f1/source4/smb_server/smb/reply.c#L2038
+# reply to a session setup command
+def smbsrv_reply_sesssetup (req: smb_request_buffer):
+    if req.wct == 10:
+        # a pre-NT1 call
+        raise NotImplementedError
+        return reply_sesssetup_old(req)
+    elif req.wct == 13:
+        # a NT1 call
+        return reply_sesssetup_nt1(req)
+    elif req.wct == 12:
+        # a SPNEGO call
+        raise NotImplementedError
+        return reply_sesssetup_spnego(req)
+
+
+
 # https://github.com/samba-team/samba/blob/7cae7aad1ca6dcd5e0a3a102f36af74fa49a2c2b/source4/smb_server/smb/negprot.c#L513
 def smbsrv_reply_negprot(rq_in: smb_request_buffer):
 
@@ -3404,10 +3582,12 @@ class SMB1_parser:
         ### switch message
         if command_name == "SMBnegprot":
             return smbsrv_reply_negprot(rq_in)
+        elif command_name == "SMBsesssetupX":
+            return smbsrv_reply_sesssetup(rq_in)
 
 
         if command_name != 'SMBnegprot':
-            print(command_name)
+            print(f"SMB1 function name: {command_name}")
 
 
         return None
@@ -3420,8 +3600,9 @@ def test_smb():
 
     smb1_parser = SMB1_parser()
     valid = 0
+    all_smb_requsts = [b'\x00\x00\x00c\xffSMBs\x00\x00\x00\x00\x18\x01 \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00/K\x00\x00\xc5^\r\xff\x00\x00\x00\xdf\xff\x02\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00&\x00\x00.\x00Windows 2000 2195\x00Windows 2000 5.0\x00']
     for rq in all_smb_requsts:
-        #parsed = smb1_parser.create_smb_response(rq)
+        parsed = smb1_parser.create_smb_response(rq)
         try:
             parsed = smb1_parser.create_smb_response(rq)
             print(parsed)
